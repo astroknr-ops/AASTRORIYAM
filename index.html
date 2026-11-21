@@ -46,13 +46,18 @@ button.gold.active{background:rgba(251,191,36,.2);border-color:var(--accent2);co
 .pan table{width:100%;border-collapse:collapse;margin:6px 0}
 .pan td{padding:2px 4px;border-bottom:1px solid rgba(148,163,184,.1)}
 .pan td:first-child{color:var(--accent)}
+.toolbar{bottom:66px}
+.toolbar.hide{display:none}
+.csv-bar.hide{display:none}
+.fab{position:fixed;right:12px;bottom:12px;z-index:30;width:46px;height:46px;border-radius:50%;font-size:20px;padding:0;background:rgba(11,18,36,.95)}
+.pan,.drawer{top:92px}
 </style>
 </head>
 <body>
 <canvas id="sky"></canvas>
 <div class="topbar">
   <div class="brand"><h1>AASTRORIYAM</h1><small id="statusText">Loading...</small><small id="moonText" style="color:#fde68a"></small></div>
-  <div class="csv-bar">
+  <div class="csv-bar hide" id="csvBar">
     <input id="csvInput" type="url" placeholder="Google Sheet Published CSV URL ഇവിടെ പേസ്റ്റ് ചെയ്യുക...">
     <button id="loadCsvBtn" class="active">Load Sheet</button>
   </div>
@@ -74,7 +79,8 @@ button.gold.active{background:rgba(251,191,36,.2);border-color:var(--accent2);co
   <div class="info-row" id="infoStars"></div><div class="info-row" id="infoCoords"></div>
 </div>
 <div class="pan" id="pan"></div>
-<div class="toolbar">
+<button class="fab" id="menuBtn">☰</button>
+<div class="toolbar hide" id="toolbar">
   <button id="toggleLinesBtn" class="active">രാശി വരകൾ</button>
   <button id="toggleArtBtn" class="gold active">ചിത്രം</button>
   <button id="toggleLabelsBtn" class="active">പേരുകൾ</button>
@@ -83,6 +89,7 @@ button.gold.active{background:rgba(251,191,36,.2);border-color:var(--accent2);co
   <button id="gpsBtn">ലൊക്കേഷൻ (GPS)</button>
   <button id="compassBtn">കോമ്പസ്</button>
   <button id="resetViewBtn">സെന്റർ</button>
+  <button id="toggleCsvBtn">ഷീറ്റ്</button>
   <button id="togglePanBtn">പഞ്ചാംഗം</button>
   <button id="toggleDrawerBtn" class="active">ചെക്ക് ലിസ്റ്റ്</button>
 </div>
@@ -588,6 +595,8 @@ try{ const u=localStorage.getItem("nl_csv"); if(u){$("csvInput").value=u;loadFro
 requestAnimationFrame(frame);
 $("togglePanBtn").onclick=function(){ const p=$("pan"); p.classList.toggle("show"); this.classList.toggle("active",p.classList.contains("show")); if(p.classList.contains("show")) renderPan(); };
 setInterval(()=>{ if($("pan").classList.contains("show")) renderPan(); },30000);
+$("menuBtn").onclick=()=>{ const t=$("toolbar"); t.classList.toggle("hide"); $("menuBtn").textContent=t.classList.contains("hide")?"☰":"✕"; };
+$("toggleCsvBtn").onclick=function(){ const c=$("csvBar"); c.classList.toggle("hide"); this.classList.toggle("active",!c.classList.contains("hide")); };
 </script>
 </body>
 </html>
