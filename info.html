@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AASTRORIYAM — കൂടുതൽ വിവരങ്ങൾ</title>
+<style>
+:root{--text:#f1f5f9;--muted:#94a3b8;--accent:#38bdf8;--gold:#fbbf24;--border:rgba(148,163,184,.22)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:transparent;color:var(--text);font:13px/1.6 system-ui,"Noto Sans Malayalam",sans-serif;padding:12px 14px}
+h2{font-size:15px;color:var(--accent)}
+.sub{color:var(--muted);font-size:11px;margin-bottom:8px}
+.sw{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border);font-weight:600;cursor:pointer}
+.sw input{display:none}
+.sw i{width:38px;height:22px;border-radius:99px;background:#334155;position:relative;flex:none;transition:.2s}
+.sw i::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.2s}
+.sw input:checked+i{background:var(--gold)}
+.sw input:checked+i::after{left:19px}
+.blk{display:none;padding-bottom:8px}.blk.on{display:block}
+.blk b{color:var(--gold)}
+table{width:100%;border-collapse:collapse;margin:6px 0}
+td{padding:2px 4px;border-bottom:1px solid rgba(148,163,184,.1)}td:first-child{color:var(--accent)}
+details{border-top:1px solid var(--border);padding:8px 0}
+summary{cursor:pointer;font-weight:600}
+details ul{padding-left:18px}details li,details p{color:#cbd5e1;font-size:12px;margin-top:4px}
+a{color:var(--accent)}.note{color:var(--muted);font-size:11px}
+</style>
+</head>
+<body>
+<h2>AASTRORIYAM</h2>
+<div class="sub">മലയാളം ലൈവ് സ്കൈ മാപ്പ് • <span id="loc">—</span></div>
+
+<label class="sw"><span>ചന്ദ്രന്റെ സ്ഥാനം</span><input type="checkbox" id="swMoon"><i></i></label>
+<div class="blk" id="blkMoon"></div>
+<label class="sw"><span>പഞ്ചാംഗം</span><input type="checkbox" id="swPan"><i></i></label>
+<div class="blk" id="blkPan"></div>
+
+<details><summary>ഉപയോഗിക്കുന്ന വിധം</summary><ul>
+<li>വിരൽ കൊണ്ട് വലിച്ചാൽ ആകാശം തിരിയും, രണ്ട് വിരൽ കൊണ്ട് സൂം ചെയ്യാം.</li>
+<li>കോൺസ്റ്റലേഷൻ, ഗ്രഹം, നക്ഷത്രം എന്നിവയിൽ ടാപ്പ് ചെയ്താൽ വിവരം കാണാം.</li>
+<li>☰ ബട്ടണിൽ വരകൾ, പേരുകൾ, ഗ്രഹങ്ങൾ, GPS, കോമ്പസ് തുടങ്ങിയവ ഉണ്ട്.</li>
+<li>കോമ്പസ് ഫോണിൽ സ്വയം ഓണാകും. ദിശ ശരിയല്ലെങ്കിൽ ഫോൺ "8" ആകൃതിയിൽ ചലിപ്പിച്ച് കാലിബ്രേറ്റ് ചെയ്യുക.</li>
+</ul></details>
+
+<details><summary>ഡാറ്റയും കൃതജ്ഞതയും</summary>
+<p>കോൺസ്റ്റലേഷൻ വരകളും നക്ഷത്രങ്ങളും: <a href="https://github.com/ofrohn/d3-celestial" target="_blank" rel="noopener">d3-celestial</a> (Olaf Frohn, BSD 3-Clause, © 2015).</p>
+<p>ചന്ദ്രൻ, ഗ്രഹങ്ങൾ: Paul Schlyter-ന്റെ ലളിതമായ സമവാക്യങ്ങൾ. അയനാംശം: ലാഹിരി (ഏകദേശം).</p>
+<p class="note">ഇവ ഏകദേശ കണക്കുകളാണ്. മുഹൂർത്തം, ഗ്രഹണം തുടങ്ങിയ കൃത്യത വേണ്ട കാര്യങ്ങൾക്ക് ഉപയോഗിക്കരുത്.</p></details>
+
+<script>
+const $=id=>document.getElementById(id);
+const send=m=>{ if(window.parent!==window) window.parent.postMessage(m,"*"); };
+const row=(k,v)=>`<div><b>${k}:</b> ${v}</div>`;
+["Moon","Pan"].forEach(n=>$("sw"+n).addEventListener("change",e=>{
+  $("blk"+n).classList.toggle("on",e.target.checked);
+  send({type:"aa-set",key:n.toLowerCase(),on:e.target.checked});
+}));
+window.addEventListener("message",e=>{
+  if(e.source!==window.parent||!e.data||e.data.type!=="aa-data") return;
+  const d=e.data.data; $("loc").textContent=d.loc;
+  [["Moon",d.wantMoon],["Pan",d.wantPan]].forEach(([n,on])=>{ $("sw"+n).checked=on; $("blk"+n).classList.toggle("on",on); });
+  const m=d.moon;
+  if(m) $("blkMoon").innerHTML=row("നക്ഷത്രം",m.nak)+row("തിഥി",m.tithi)+row("ഘട്ടം",`${m.phase} • ${m.lit}% പ്രകാശം`)
+    +row("രാശി (നിരയനം)",m.rasi)+row("ഇപ്പോൾ",`${m.alt}° ഉയരം, ${m.dir}`)+row("ഉദയം / അസ്തമയം",`${m.rise} / ${m.set}`);
+  const p=d.pan;
+  if(p) $("blkPan").innerHTML=row("തിഥി",`${p.tithi} <span class="note">(അവസാനം ${p.tithiEnd})</span>`)
+    +row("നക്ഷത്രം",`${p.nak} <span class="note">(അവസാനം ${p.nakEnd})</span>`)+row("രാഹുകാലം",p.rahukalam)
+    +`<div>${p.nodes}</div><table><tr><td></td><td>ഉദയം</td><td>അസ്തമയം</td></tr>${p.rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("")}</table>`
+    +`<div class="note">സമയം ഫോണിന്റെ സമയമേഖലയിൽ.</div>`;
+});
+send({type:"aa-ready"});
+</script>
+</body>
+</html>

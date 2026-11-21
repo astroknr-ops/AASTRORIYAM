@@ -51,12 +51,16 @@ button.gold.active{background:rgba(251,191,36,.2);border-color:var(--accent2);co
 .csv-bar.hide{display:none}
 .fab{position:fixed;right:12px;bottom:12px;z-index:30;width:46px;height:46px;border-radius:50%;font-size:20px;padding:0;background:rgba(11,18,36,.95)}
 .pan,.drawer{top:92px}
+.more{margin-top:4px;padding:3px 8px;font-size:11px;color:var(--accent2);border-color:rgba(251,191,36,.4)}
+.infopanel{position:fixed;left:10px;top:108px;width:330px;max-width:calc(100vw - 20px);height:min(520px,calc(100dvh - 200px));z-index:26;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--panel);backdrop-filter:blur(10px)}
+.infopanel.hide{display:none}
+.infopanel iframe{width:100%;height:100%;border:0;background:transparent}
 </style>
 </head>
 <body>
 <canvas id="sky"></canvas>
 <div class="topbar">
-  <div class="brand"><h1>AASTRORIYAM</h1><small id="statusText">Loading...</small><small id="moonText" style="color:#fde68a"></small></div>
+  <div class="brand"><h1>AASTRORIYAM</h1><small id="statusText">Loading...</small><button id="moreBtn" class="more">കൂടുതൽ വിവരങ്ങൾ ▾</button></div>
   <div class="csv-bar hide" id="csvBar">
     <input id="csvInput" type="url" placeholder="Google Sheet Published CSV URL ഇവിടെ പേസ്റ്റ് ചെയ്യുക...">
     <button id="loadCsvBtn" class="active">Load Sheet</button>
@@ -78,7 +82,7 @@ button.gold.active{background:rgba(251,191,36,.2);border-color:var(--accent2);co
   <div class="info-row" id="infoSub"></div><div class="info-row" id="infoNak"></div>
   <div class="info-row" id="infoStars"></div><div class="info-row" id="infoCoords"></div>
 </div>
-<div class="pan" id="pan"></div>
+<div class="infopanel hide" id="infoPanel"><iframe id="infoFrame" title="കൂടുതൽ വിവരങ്ങൾ"></iframe></div>
 <button class="fab" id="menuBtn">☰</button>
 <div class="toolbar hide" id="toolbar">
   <button id="toggleLinesBtn" class="active">രാശി വരകൾ</button>
@@ -225,22 +229,46 @@ function rahuKalam(sr,ss){
 }
 const fmt=t=>t?new Date(t).toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit",hour12:true}):"—";
 const fmtD=t=>fmt(t)+(new Date(t).toDateString()!==new Date().toDateString()?` (${new Date(t).getDate()}/${new Date(t).getMonth()+1})`:"");
-let panCache={k:-1};
-function renderPan(){
-  const now=Date.now(), mk=Math.floor(now/60000);
-  if(panCache.k!==mk) panCache={k:mk,te:tithiEnd(now),ne:nakEnd(now)};
-  const E=ephem(now), mo=E.find(o=>o.key==="moon"), rs=riseSet(dayStartMs());
-  const sr=rs.sun.rise, ss=rs.sun.set, rk=sr&&ss?rahuKalam(sr,ss):null;
-  const rows=RS_BODIES.map(k=>{const b=E.find(o=>o.key===k);return `<tr><td>${b.ml}</td><td>${fmt(rs[k].rise)}</td><td>${fmt(rs[k].set)}</td></tr>`}).join("");
-  const rr=["rahu","ketu"].map(k=>{const b=E.find(o=>o.key===k),s=rev(b.lon-b.ayan);return `${b.ml}: ${RASI[Math.floor(s/30)]} ${(s%30).toFixed(0)}°`}).join(" • ");
-  $("pan").innerHTML=`<h3>പഞ്ചാംഗം</h3>
-   <div><b>തിഥി:</b> ${tithiName(mo.el)} <span style="color:#94a3b8">(അവസാനം ${fmtD(panCache.te)})</span></div>
-   <div><b>നക്ഷത്രം:</b> ${NAK[mo.nak][0]} <span style="color:#94a3b8">(അവസാനം ${fmtD(panCache.ne)})</span></div>
-   <div><b>രാഹുകാലം:</b> ${rk?fmt(rk[0])+" – "+fmt(rk[1]):"—"}</div>
-   <div>${rr}</div>
-   <table><tr><td></td><td>ഉദയം</td><td>അസ്തമയം</td></tr>${rows}</table>
-   <div style="color:#94a3b8">സമയം ഫോണിന്റെ സമയമേഖലയിൽ • ${lat.toFixed(2)}°, ${lon.toFixed(2)}°</div>`;
+let panCache={k:-1}, wantMoon=false, wantPan=false, infoOpen=false;
+try{ const st=JSON.parse(localStorage.getItem("aa_info")||"{}"); wantMoon=!!st.moon; wantPan=!!st.pan; }catch{}
+const saveInfo=()=>{ try{localStorage.setItem("aa_info",JSON.stringify({moon:wantMoon,pan:wantPan}))}catch{} };
+const DIRS=["വടക്ക്","വടക്ക്-കിഴക്ക്","കിഴക്ക്","തെക്ക്-കിഴക്ക്","തെക്ക്","തെക്ക്-പടിഞ്ഞാറ്","പടിഞ്ഞാറ്","വടക്ക്-പടിഞ്ഞാറ്"];
+function infoData(){
+  const now=Date.now(), E=ephem(now), mo=E.find(o=>o.key==="moon");
+  const out={loc:`${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E`,wantMoon,wantPan};
+  const rs=(wantMoon||wantPan)?riseSet(dayStartMs()):null;
+  if(wantMoon){
+    const [az,alt]=horiz(mo.ra,mo.dec,getLST()), a=alt-mo.par*Math.cos(alt);
+    out.moon={nak:NAK[mo.nak][0],tithi:tithiName(mo.el),phase:mo.phase,lit:Math.round(mo.lit*100),
+      rasi:`${RASI[Math.floor(mo.sid/30)]} ${(mo.sid%30).toFixed(0)}°`,alt:(a/D).toFixed(0),dir:DIRS[Math.round(az/D/45)%8],
+      rise:fmt(rs.moon.rise),set:fmt(rs.moon.set)};
+  }
+  if(wantPan){
+    const mk=Math.floor(now/60000);
+    if(panCache.k!==mk) panCache={k:mk,te:tithiEnd(now),ne:nakEnd(now)};
+    const sr=rs.sun.rise, ss=rs.sun.set, rk=sr&&ss?rahuKalam(sr,ss):null;
+    out.pan={tithi:tithiName(mo.el),tithiEnd:fmtD(panCache.te),nak:NAK[mo.nak][0],nakEnd:fmtD(panCache.ne),
+      rahukalam:rk?fmt(rk[0])+" – "+fmt(rk[1]):"—",
+      nodes:["rahu","ketu"].map(k=>{const b=E.find(o=>o.key===k),sd=rev(b.lon-b.ayan);return `${b.ml}: ${RASI[Math.floor(sd/30)]} ${(sd%30).toFixed(0)}°`}).join(" • "),
+      rows:RS_BODIES.map(k=>[E.find(o=>o.key===k).ml,fmt(rs[k].rise),fmt(rs[k].set)])};
+  }
+  return out;
 }
+function pushInfo(){ if(!infoOpen) return; const f=$("infoFrame").contentWindow; if(f) f.postMessage({type:"aa-data",data:infoData()},"*"); }
+function openInfo(open){
+  infoOpen=open; $("infoPanel").classList.toggle("hide",!open);
+  $("moreBtn").textContent=open?"കൂടുതൽ വിവരങ്ങൾ ▴":"കൂടുതൽ വിവരങ്ങൾ ▾";
+  if(open){ const fr=$("infoFrame"); if(!fr.getAttribute("src")) fr.src="info.html"; else pushInfo(); }
+}
+window.addEventListener("message",e=>{
+  if(!e.data||e.source!==$("infoFrame").contentWindow) return;
+  if(e.data.type==="aa-ready") pushInfo();
+  if(e.data.type==="aa-set"){
+    if(e.data.key==="moon") wantMoon=!!e.data.on;
+    if(e.data.key==="pan") wantPan=!!e.data.on;
+    saveInfo(); pushInfo();
+  }
+});
 function showBody(b){
   const m=b.key==="moon", rs=riseSet(dayStartMs())[b.key], sd=b.ring?rev(b.lon-b.ayan):0;
   $("infoTitle").textContent=b.ml;
@@ -329,6 +357,38 @@ function drawMoon(x,y,r,el,rot=0){
   ctx.ellipse(0,0,Math.abs(c)*r,r,0,P/2,-P/2,wax?c>0:c<0);
   ctx.fill(); ctx.restore();
 }
+// ---- ആർട്ട് ചിത്രം: 2-3 ആങ്കർ നക്ഷത്രങ്ങൾ [u,v,RA,Dec] (u,v = ചിത്രത്തിൽ 0..1) ----
+function affine(s,d){
+  if(s.length===2){   // 2 ആങ്കർ: സിമിലാരിറ്റി (റൊട്ടേഷൻ + ഒരേ സ്കെയിൽ)
+    const [a,b]=s,[c,e]=d;
+    s=[a,b,[a[0]-(b[1]-a[1]),a[1]+(b[0]-a[0])]];
+    d=[c,e,[c[0]-(e[1]-c[1]),c[1]+(e[0]-c[0])]];
+  }
+  const [x0,y0]=s[0],[x1,y1]=s[1],[x2,y2]=s[2];
+  const det=(x1-x0)*(y2-y0)-(x2-x0)*(y1-y0); if(Math.abs(det)<1e-9) return null;
+  const f=i=>{ const v0=d[0][i],v1=d[1][i],v2=d[2][i];
+    const p=((v1-v0)*(y2-y0)-(v2-v0)*(y1-y0))/det, q=((v2-v0)*(x1-x0)-(v1-v0)*(x2-x0))/det;
+    return [p,q,v0-p*x0-q*y0]; };
+  const X=f(0),Y=f(1);
+  return [X[0],Y[0],X[1],Y[1],X[2],Y[2]];
+}
+function drawArt(c,lst){
+  const im=c.img; if(!im||!im.naturalWidth) return;
+  const iw=im.naturalWidth, ih=im.naturalHeight, an=c.anchors; let T=null;
+  if(an&&an.length>=2){
+    const src=[],dst=[];
+    for(const a of an.slice(0,3)){ const p=toScr(a[2],a[3],lst,-90); if(!p) return; src.push([a[0]*iw,a[1]*ih]); dst.push([p.x,p.y]); }
+    T=affine(src,dst);
+  }
+  ctx.save(); ctx.globalAlpha=.34;
+  if(T){ ctx.transform(...T); ctx.drawImage(im,0,0); }
+  else{   // ആങ്കർ ഇല്ലെങ്കിൽ: കോൺസ്റ്റലേഷന്റെ വരകൾക്ക് ചുറ്റും ഏകദേശം ഫിറ്റ്
+    let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+    for(const poly of c.lines) for(const q of poly){ const p=toScr(q[0],q[1],lst,-90); if(p){x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y)} }
+    if(x0<=x1){ const z=Math.max(x1-x0,y1-y0)*1.15; ctx.drawImage(im,(x0+x1)/2-z/2,(y0+y1)/2-z/2,z,z); }
+  }
+  ctx.restore();
+}
 function drawExtras(lst){
   ctx.textAlign="center";
   if(showNak){
@@ -342,7 +402,6 @@ function drawExtras(lst){
   }
   bodies=ephem();
   const mo=bodies.find(b=>b.key==="moon");
-  $("moonText").textContent=`ചന്ദ്രൻ: ${NAK[mo.nak][0]} നക്ഷത്രം • ${Math.round(mo.lit*100)}% • ${tithiName(mo.el)}`;
   ctx.font="600 12px 'Noto Sans Malayalam',system-ui,sans-serif";
   bodies.forEach(b=>{
     b.sx=null; if(!showBodies) return;
@@ -401,9 +460,7 @@ function draw(){
     const col=c.zodiac?"251,191,36":"56,189,248";
     const cs=toScr(c.ra,c.dec,lst,-15);
     if(cs){c.sx=cs.x;c.sy=cs.y}
-    if(showArt&&cs&&c.img){
-      const z=S*.4; ctx.globalAlpha=.34; ctx.drawImage(c.img,cs.x-z/2,cs.y-z/2,z,z); ctx.globalAlpha=1;
-    }
+    if(showArt&&c.img) drawArt(c,lst);
     if(showLines){
       ctx.strokeStyle=`rgba(${col},.7)`; ctx.lineWidth=1.4;
       for(const poly of c.lines){
@@ -523,8 +580,10 @@ $("gpsBtn").onclick=()=>{
   },()=>alert("ലൊക്കേഷൻ അനുമതി ലഭിച്ചില്ല"));
 };
 const orientEvt = "ondeviceorientationabsolute" in window ? "deviceorientationabsolute" : "deviceorientation";
+let compassWanted=false;
 function handleOrientation(e){
   if(e.alpha==null||e.beta==null||e.gamma==null) return;
+  if(!compassOn){ compassOn=true; $("compassBtn").classList.add("active"); }   // സെൻസർ ഉള്ളപ്പോൾ മാത്രം
   const alpha = e.webkitCompassHeading!=null ? 360-e.webkitCompassHeading : e.alpha;
   const a=alpha*D,b=e.beta*D,g=e.gamma*D;
   const vx=-Math.cos(a)*Math.sin(g)-Math.sin(a)*Math.sin(b)*Math.cos(g);
@@ -534,17 +593,25 @@ function handleOrientation(e){
   pitch=Math.max(-10,Math.min(88,Math.asin(Math.max(-1,Math.min(1,vz)))/D));
   needs=true;
 }
-$("compassBtn").addEventListener("click",async function(){
-  if(!compassOn){
-    try{
-      if(typeof DeviceOrientationEvent!=="undefined"&&typeof DeviceOrientationEvent.requestPermission==="function"){
-        if(await DeviceOrientationEvent.requestPermission()!=="granted") return;
-      }
-    }catch{return}
-    window.addEventListener(orientEvt,handleOrientation); compassOn=true; this.classList.add("active");
-  }else{
-    window.removeEventListener(orientEvt,handleOrientation); compassOn=false; this.classList.remove("active");
-  }
+async function startCompass(gesture){
+  if(compassWanted) return;
+  try{
+    if(typeof DeviceOrientationEvent!=="undefined"&&typeof DeviceOrientationEvent.requestPermission==="function"){
+      if(!gesture) return;                       // iOS: ആദ്യ ടച്ചിൽ അനുമതി ചോദിക്കും
+      if(await DeviceOrientationEvent.requestPermission()!=="granted") return;
+    }
+  }catch{return}
+  window.addEventListener(orientEvt,handleOrientation); compassWanted=true;
+}
+function stopCompass(){
+  window.removeEventListener(orientEvt,handleOrientation);
+  compassWanted=false; compassOn=false; $("compassBtn").classList.remove("active");
+}
+$("compassBtn").onclick=()=>compassWanted?stopCompass():startCompass(true);
+startCompass(false);
+window.addEventListener("pointerdown",function f(e){
+  if(e.target.id==="compassBtn") return;
+  window.removeEventListener("pointerdown",f); startCompass(true);
 });
 
 // ---- Google Sheet (CSV): മലയാളം പേര്, വിഭാഗം, നക്ഷത്രം, പ്രധാന നക്ഷത്രങ്ങൾ, ചിത്രം URL ----
@@ -563,7 +630,7 @@ function parseCSV(t){
 }
 function loadArt(c){
   if(!c.artUrl){c.img=null;return}
-  const im=new Image(); im.crossOrigin="anonymous";
+  const im=new Image();
   im.onload=()=>{c.img=im;needs=true}; im.src=c.artUrl;
 }
 async function loadFromCSV(url){
@@ -578,6 +645,7 @@ async function loadFromCSV(url){
       if(r[4]) c.zodiac=/zodiac/i.test(r[4]);
       c.nak=(r[5]||"").trim(); c.stars=(r[6]||"").trim();
       const art=(r[7]||"").trim(); if(art!==c.artUrl){c.artUrl=art;loadArt(c)}
+      try{const an=(r[10]||"").trim(); c.anchors=an?JSON.parse(an):null}catch{c.anchors=null}
     });
     try{localStorage.setItem("nl_csv",url)}catch{}
     renderChecklist(); needs=true;
@@ -593,10 +661,11 @@ if(window.innerWidth<700){ $("drawer").classList.add("hidden"); $("toggleDrawerB
 $("statusText").textContent=`${cons.length} കോൺസ്റ്റലേഷൻ • ${STARS.length} നക്ഷത്രം • ${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E`;
 try{ const u=localStorage.getItem("nl_csv"); if(u){$("csvInput").value=u;loadFromCSV(u)} }catch{}
 requestAnimationFrame(frame);
-$("togglePanBtn").onclick=function(){ const p=$("pan"); p.classList.toggle("show"); this.classList.toggle("active",p.classList.contains("show")); if(p.classList.contains("show")) renderPan(); };
-setInterval(()=>{ if($("pan").classList.contains("show")) renderPan(); },30000);
 $("menuBtn").onclick=()=>{ const t=$("toolbar"); t.classList.toggle("hide"); $("menuBtn").textContent=t.classList.contains("hide")?"☰":"✕"; };
 $("toggleCsvBtn").onclick=function(){ const c=$("csvBar"); c.classList.toggle("hide"); this.classList.toggle("active",!c.classList.contains("hide")); };
+$("togglePanBtn").onclick=()=>{ wantPan=true; saveInfo(); openInfo(true); pushInfo(); };
+$("moreBtn").onclick=()=>openInfo(!infoOpen);
+setInterval(pushInfo,1000);
 </script>
 </body>
 </html>
