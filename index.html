@@ -2,17 +2,21 @@
 <html lang="ml">
 <head>
 <meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Malayalam:wght@400;600;700&display=swap">
 <link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-title" content="AASTRORIUM">
 <meta name="theme-color" content="#050811">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>AASTRORIYAM — ലൈവ് സ്കൈ മാപ്പ്</title>
+<title>ആസ്ട്രോറിയം (AASTRORIUM) — ആസ്ട്രോകേരളയുടെ നക്ഷത്ര നിരീക്ഷണ സഹായി</title>
 <style>
 :root{--bg:#050811;--panel:rgba(11,18,36,.92);--border:rgba(148,163,184,.22);--accent:#38bdf8;--accent2:#fbbf24;--text:#f1f5f9;--muted:#94a3b8}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans Malayalam",sans-serif;overflow:hidden;height:100dvh;width:100vw;user-select:none;-webkit-user-select:none}
+body{background:var(--bg);color:var(--text);font-family:"Noto Sans Malayalam",system-ui,-apple-system,sans-serif;overflow:hidden;height:100dvh;width:100vw;user-select:none;-webkit-user-select:none}
 input{user-select:text;-webkit-user-select:text}
 canvas#sky{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
 .topbar{position:fixed;top:10px;left:10px;right:10px;z-index:20;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;pointer-events:none}
@@ -85,6 +89,8 @@ html.night{filter:sepia(1) saturate(4) hue-rotate(-40deg) brightness(.8)}
 .toolbar{max-height:calc(100dvh - var(--fh,76px) - 120px)}
 .footer #hud{position:static;display:none;margin-bottom:4px;padding:0 0 4px;border:0;border-bottom:1px solid var(--border);border-radius:0;background:none;text-align:left;font-size:10.5px}
 .footer #hud div{display:inline-block;margin-right:10px}
+button,input,select,textarea{font-family:inherit}
+.footer .tag{font-size:11px;color:var(--text);margin-top:1px}
 </style>
 </head>
 <body>
@@ -115,7 +121,8 @@ html.night{filter:sepia(1) saturate(4) hue-rotate(-40deg) brightness(.8)}
 <div id="toast"></div>
 <div class="footer" id="footer">
   <div id="hud"></div>
-  <div class="row"><h1>AASTRORIYAM</h1><small id="statusText">Loading...</small><button id="moreBtn" class="more">കൂടുതൽ വിവരങ്ങൾ ▴</button></div>
+  <div class="row"><h1>ആസ്ട്രോറിയം <span style="font-weight:400">(AASTRORIUM)</span></h1><small id="statusText">Loading...</small><button id="moreBtn" class="more">കൂടുതൽ വിവരങ്ങൾ ▴</button></div>
+  <div class="tag">ആസ്ട്രോകേരളയുടെ നക്ഷത്ര നിരീക്ഷണ സഹായി</div>
   <div class="copy">© 2026 ആസ്ട്രോ കണ്ണൂർ &nbsp;•&nbsp; പകർപ്പവകാശം സംരക്ഷിതം<br>ആസ്ട്രോ കണ്ണൂരിനു വേണ്ടി നിർമ്മിച്ചത് &nbsp;•&nbsp; നിർമ്മാണം: പ്രഭാകരൻ കോവൂർ</div>
 </div>
 <button class="fab" id="menuBtn">☰</button>
@@ -150,7 +157,7 @@ const cons = Object.keys(CON).map(k => ({
   nak:"", stars:"", artUrl:"", img:null, lines:CON[k].l, ra:CON[k].c[0], dec:CON[k].c[1],
   checked:KEY.has(k), sx:null, sy:null
 })).sort((a,b)=>a.english.localeCompare(b.english));
-cons.forEach((c,i)=>c.id=i+1);
+cons.forEach((c,i)=>c.id=i+1); normNames();
 
 const D = Math.PI/180;
 const $ = id => document.getElementById(id);
@@ -534,7 +541,7 @@ function draw(){
     if(showLabels&&cs){
       ctx.fillStyle=c.zodiac?"#fde68a":"#bae6fd";
       ctx.font="600 12px 'Noto Sans Malayalam',system-ui,sans-serif";
-      ctx.font=`600 ${SET.lab}px 'Noto Sans Malayalam',system-ui,sans-serif`; ctx.textAlign="center"; ctx.fillText(c.malayalam,cs.x,cs.y-10);
+      ctx.font=`600 ${SET.lab}px 'Noto Sans Malayalam',system-ui,sans-serif`; ctx.textAlign="center"; ctx.fillText(c.label,cs.x,cs.y-10);
     }
   }
 
@@ -553,12 +560,12 @@ function renderChecklist(){
   const q=$("searchBox").value.trim().toLowerCase(), el=$("checklist");
   el.innerHTML="";
   cons.forEach(c=>{
-    if(q && !`${c.id} ${c.abbr} ${c.english} ${c.malayalam} ${c.nak} ${c.stars}`.toLowerCase().includes(q)) return;
+    if(q && !`${c.id} ${c.abbr} ${c.english} ${c.malayalam} ${c.alias||""} ${c.nak} ${c.stars}`.toLowerCase().includes(q)) return;
     const row=document.createElement("div"); row.className="chk-item";
     const cb=document.createElement("input"); cb.type="checkbox"; cb.checked=c.checked; cb.id="chk_"+c.abbr;
     cb.addEventListener("change",()=>{c.checked=cb.checked;updateCount();needs=true;if(cb.checked)showInfo(c)});
     const lb=document.createElement("label"); lb.className="chk-label"; lb.htmlFor=cb.id;
-    lb.innerHTML=`<strong>${c.id}. ${c.malayalam}</strong><span>${c.english} (${c.abbr})${c.nak?" • "+c.nak:""}</span>`;
+    lb.innerHTML=`<strong>${c.id}. ${c.label}</strong><span>${c.alias?c.alias+" • ":""}${c.abbr}${c.nak?" • "+c.nak:""}</span>`;
     lb.addEventListener("click",()=>showInfo(c));
     row.append(cb,lb);
     if(c.zodiac){const t=document.createElement("span");t.className="tag";t.textContent="രാശി";row.append(t)}
@@ -568,7 +575,7 @@ function renderChecklist(){
 }
 function updateCount(){ $("selectedCount").textContent=`${cons.filter(c=>c.checked).length} / ${cons.length}`; }
 function showInfo(c){
-  $("infoTitle").textContent=`${c.malayalam} (${c.english})`;
+  $("infoTitle").textContent=`${c.label}${c.alias?" • "+c.alias:""}`;
   $("infoSub").innerHTML=`<b>കോഡ്:</b> ${c.abbr}${c.zodiac?" • രാശി":""}`;
   $("infoNak").innerHTML=`<b>നക്ഷത്രങ്ങൾ (മൂൺ):</b> ${c.nak||"—"}`;
   $("infoStars").innerHTML=`<b>പ്രധാന നക്ഷത്രങ്ങൾ:</b> ${c.stars||"—"}`;
@@ -705,7 +712,7 @@ async function loadFromCSV(url){
       const art=(r[7]||"").trim(); if(art!==c.artUrl){c.artUrl=art;loadArt(c)}
       try{const an=(r[10]||"").trim(); c.anchors=an?JSON.parse(an):null}catch{c.anchors=null}
     });
-    try{localStorage.setItem("nl_csv",url)}catch{}
+    normNames(); try{localStorage.setItem("nl_csv",url)}catch{}
     renderChecklist(); needs=true;
     st.textContent=`CSV അപ്‌ഡേറ്റ് ആയി (${rows.length} വരികൾ)`;
   }catch{ st.textContent="CSV വായിക്കാൻ കഴിഞ്ഞില്ല (ബിൽറ്റ്-ഇൻ ഡാറ്റ ഉപയോഗിക്കുന്നു)"; }
@@ -842,7 +849,7 @@ function goTo(ra,dec,j2000){
 }
 function findObjs(q){
   q=q.trim().toLowerCase(); if(!q) return []; const r=[];
-  cons.forEach(c=>{ if((c.malayalam+" "+c.english+" "+c.abbr).toLowerCase().includes(q)) r.push({n:c.malayalam,go:()=>{ if(!c.checked){c.checked=true;renderChecklist();} goTo(c.ra,c.dec,true); showInfo(c); }}); });
+  cons.forEach(c=>{ if((c.malayalam+" "+(c.alias||"")+" "+c.english+" "+c.abbr).toLowerCase().includes(q)) r.push({n:c.label,go:()=>{ if(!c.checked){c.checked=true;renderChecklist();} goTo(c.ra,c.dec,true); showInfo(c); }}); });
   bodies.forEach(b=>{ if((b.ml+" "+b.key).toLowerCase().includes(q)) r.push({n:b.ml,go:()=>{ goTo(b.ra,b.dec,false); showBody(b); }}); });
   NAK.forEach(n=>{ if((n[0]+" "+n[1]).toLowerCase().includes(q)) r.push({n:n[0]+" (നക്ഷത്രം)",go:()=>{ goTo(n[2],n[3],true); showNakInfo(n); }}); });
   return r.slice(0,8);
@@ -894,6 +901,19 @@ menuShow(true);
 const setFH=()=>document.documentElement.style.setProperty("--fh",$("footer").offsetHeight+"px");
 if(window.ResizeObserver) new ResizeObserver(setFH).observe($("footer"));
 setFH();
+// ===== പേരുകൾ: മലയാളം (English) + ഫോണ്ട് ലോഡ് =====
+function normNames(){
+  const TR=new Set(["AQR","ARI","CNC","CAP","GEM","LEO","LIB","PSC","SGR","SCO","TAU","VIR","UMA"]);   // ബ്രാക്കറ്റിൽ ഇംഗ്ലീഷിന്റെ മലയാളം ഉച്ചാരണം മാത്രമുള്ളവ
+  cons.forEach(c=>{
+    const m=(c.malayalam||"").match(/^(.*?)\s*[(（](.*?)[)）]\s*$/);
+    if(m){ c.malayalam=m[1].trim(); if(!TR.has(c.abbr)&&m[2].trim()) c.alias=m[2].trim(); }
+    c.label=`${c.malayalam} (${c.english})`;
+  });
+}
+if(document.fonts&&document.fonts.load){
+  Promise.all([document.fonts.load("600 12px 'Noto Sans Malayalam'","ക്ക സ്റ്റ കുംഭം"),document.fonts.load("400 12px 'Noto Sans Malayalam'","ക്ക സ്റ്റ")]).then(()=>{ needs=true; }).catch(()=>{});
+  document.fonts.ready.then(()=>{ needs=true; });
+}
 </script>
 </body>
 </html>
