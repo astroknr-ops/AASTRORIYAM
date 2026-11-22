@@ -24,6 +24,14 @@ details{border-top:1px solid var(--border);padding:8px 0}
 summary{cursor:pointer;font-weight:600}
 details ul{padding-left:18px}details li,details p{color:#cbd5e1;font-size:12px;margin-top:4px}
 a{color:var(--accent)}.note{color:var(--muted);font-size:11px}
+.chart{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,70px);gap:2px;margin:8px 0}
+.cc{border:1px solid var(--border);border-radius:4px;padding:2px 3px;font-size:11px;line-height:1.25;overflow:hidden;color:var(--gold)}
+.cc small{display:block;color:var(--muted);font-size:9px}.cc span{display:inline-block;margin-right:3px}
+.cm{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--accent);font-weight:700}
+.cm small{color:var(--muted);font-weight:400;font-size:10px}
+img.pic{width:100%;border-radius:10px;margin-top:6px}
+.btn{display:block;text-align:center;margin:10px 0;padding:9px;border-radius:10px;background:rgba(251,191,36,.18);border:1px solid var(--gold);color:var(--gold);font-weight:700;text-decoration:none}
+iframe.doc{width:100%;height:420px;border:1px solid var(--border);border-radius:8px;margin-top:6px;background:#fff}
 </style>
 </head>
 <body>
@@ -34,31 +42,56 @@ a{color:var(--accent)}.note{color:var(--muted);font-size:11px}
 <div class="blk" id="blkMoon"></div>
 <label class="sw"><span>പഞ്ചാംഗം</span><input type="checkbox" id="swPan"><i></i></label>
 <div class="blk" id="blkPan"></div>
+<label class="sw"><span>ഗ്രഹനില</span><input type="checkbox" id="swGraha"><i></i></label>
+<div class="blk" id="blkGraha"></div>
+
+<div id="dyn"></div>
 
 <details><summary>ഉപയോഗിക്കുന്ന വിധം</summary><ul>
 <li>വിരൽ കൊണ്ട് വലിച്ചാൽ ആകാശം തിരിയും, രണ്ട് വിരൽ കൊണ്ട് സൂം ചെയ്യാം.</li>
 <li>കോൺസ്റ്റലേഷൻ, ഗ്രഹം, നക്ഷത്രം എന്നിവയിൽ ടാപ്പ് ചെയ്താൽ വിവരം കാണാം.</li>
-<li>☰ ബട്ടണിൽ വരകൾ, പേരുകൾ, ഗ്രഹങ്ങൾ, GPS, കോമ്പസ് തുടങ്ങിയവ ഉണ്ട്.</li>
+<li>☰ ബട്ടണിൽ വരകൾ, പേരുകൾ, ഗ്രഹങ്ങൾ, GPS, കോമ്പസ്, പൂർണ്ണ സ്ക്രീൻ തുടങ്ങിയവ ഉണ്ട്.</li>
 <li>കോമ്പസ് ഫോണിൽ സ്വയം ഓണാകും. ദിശ ശരിയല്ലെങ്കിൽ ഫോൺ "8" ആകൃതിയിൽ ചലിപ്പിച്ച് കാലിബ്രേറ്റ് ചെയ്യുക.</li>
 </ul></details>
 
 <details><summary>ഡാറ്റയും കൃതജ്ഞതയും</summary>
 <p>കോൺസ്റ്റലേഷൻ വരകളും നക്ഷത്രങ്ങളും: <a href="https://github.com/ofrohn/d3-celestial" target="_blank" rel="noopener">d3-celestial</a> (Olaf Frohn, BSD 3-Clause, © 2015).</p>
-<p>ചന്ദ്രൻ, ഗ്രഹങ്ങൾ: Paul Schlyter-ന്റെ ലളിതമായ സമവാക്യങ്ങൾ. അയനാംശം: ലാഹിരി (ഏകദേശം).</p>
+<p>ചന്ദ്രൻ, ഗ്രഹങ്ങൾ: Paul Schlyter-ന്റെ ലളിതമായ സമവാക്യങ്ങൾ. അയനാംശം: ലാഹിരി (ഇന്ത്യൻ ഗവൺമെന്റിന്റെ പഞ്ചാംഗ പരിഷ്കരണ സമിതി ഉപയോഗിക്കുന്നത്), ഏകദേശ കണക്ക്.</p>
 <p class="note">ഇവ ഏകദേശ കണക്കുകളാണ്. മുഹൂർത്തം, ഗ്രഹണം തുടങ്ങിയ കൃത്യത വേണ്ട കാര്യങ്ങൾക്ക് ഉപയോഗിക്കരുത്.</p></details>
 
 <script>
 const $=id=>document.getElementById(id);
 const send=m=>{ if(window.parent!==window) window.parent.postMessage(m,"*"); };
 const row=(k,v)=>`<div><b>${k}:</b> ${v}</div>`;
-["Moon","Pan"].forEach(n=>$("sw"+n).addEventListener("change",e=>{
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ===== ഷീറ്റ് ക്രമീകരണം: Google Sheet-ന്റെ "Publish to web → CSV" ലിങ്ക് ഇവിടെ ഇടുക ===== */
+const INFO_CSV="";
+/* ഷീറ്റ് കോളങ്ങൾ: Date | Today_Image | Today_Question | Sky_Stories_Doc_ID | Meteor | Comet | News | Camp | Contact_Link */
+
+const RN=["മേടം","ഇടവം","മിഥുനം","കർക്കടകം","ചിങ്ങം","കന്നി","തുലാം","വൃശ്ചികം","ധനു","മകരം","കുംഭം","മീനം"];
+const POS={11:[0,0],0:[0,1],1:[0,2],2:[0,3],3:[1,3],4:[2,3],5:[3,3],6:[3,2],7:[3,1],8:[3,0],9:[2,0],10:[1,0]};
+function chart(g){
+  const cell=Array.from({length:12},()=>[]);
+  g.items.forEach(i=>cell[i.r].push(`${i.n} ${Math.floor(i.d)}°`));
+  cell[g.lagna.r].unshift("ല");
+  let h='<div class="chart">';
+  for(let r=0;r<12;r++){ const [y,x]=POS[r]; h+=`<div class="cc" style="grid-row:${y+1};grid-column:${x+1}"><small>${RN[r]}</small>${cell[r].map(t=>`<span>${t}</span>`).join("")}</div>`; }
+  return h+`<div class="cm" style="grid-row:2/4;grid-column:2/4">ഗ്രഹനില<small>${esc(g.time)}</small></div></div>`;
+}
+function grahaHTML(g){
+  return chart(g)+`<table><tr><td></td><td>രാശി</td><td>ഉദയം</td><td>അസ്തമയം</td><td>കാണാൻ</td></tr>`
+    +g.items.map(i=>`<tr><td>${i.name}</td><td>${RN[i.r]} ${Math.floor(i.d)}°</td><td>${i.rise}</td><td>${i.set}</td><td class="note">${i.vis}</td></tr>`).join("")+`</table>`
+    +`<div class="note">ല = ലഗ്നം • സൂ സൂര്യൻ, ച ചന്ദ്രൻ, കു ചൊവ്വ, ബു ബുധൻ, ഗു വ്യാഴം, ശു ശുക്രൻ, ശ ശനി, രാ രാഹു, കേ കേതു • നിരയന (ലാഹിരി) രാശികൾ • രാഹു/കേതു മീൻ നോഡ്.</div>`;
+}
+["Moon","Pan","Graha"].forEach(n=>$("sw"+n).addEventListener("change",e=>{
   $("blk"+n).classList.toggle("on",e.target.checked);
   send({type:"aa-set",key:n.toLowerCase(),on:e.target.checked});
 }));
 window.addEventListener("message",e=>{
   if(e.source!==window.parent||!e.data||e.data.type!=="aa-data") return;
   const d=e.data.data; $("loc").textContent=d.loc;
-  [["Moon",d.wantMoon],["Pan",d.wantPan]].forEach(([n,on])=>{ $("sw"+n).checked=on; $("blk"+n).classList.toggle("on",on); });
+  [["Moon",d.wantMoon],["Pan",d.wantPan],["Graha",d.wantGraha]].forEach(([n,on])=>{ $("sw"+n).checked=!!on; $("blk"+n).classList.toggle("on",!!on); });
   const m=d.moon;
   if(m) $("blkMoon").innerHTML=row("നക്ഷത്രം",m.nak)+row("തിഥി",m.tithi)+row("ഘട്ടം",`${m.phase} • ${m.lit}% പ്രകാശം`)
     +row("രാശി (നിരയനം)",m.rasi)+row("ഇപ്പോൾ",`${m.alt}° ഉയരം, ${m.dir}`)+row("ഉദയം / അസ്തമയം",`${m.rise} / ${m.set}`);
@@ -67,7 +100,70 @@ window.addEventListener("message",e=>{
     +row("നക്ഷത്രം",`${p.nak} <span class="note">(അവസാനം ${p.nakEnd})</span>`)+row("രാഹുകാലം",p.rahukalam)
     +`<div>${p.nodes}</div><table><tr><td></td><td>ഉദയം</td><td>അസ്തമയം</td></tr>${p.rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("")}</table>`
     +`<div class="note">സമയം ഫോണിന്റെ സമയമേഖലയിൽ.</div>`;
+  if(d.graha) $("blkGraha").innerHTML=grahaHTML(d.graha);
 });
+
+/* ===== ഇന്നത്തെ വിവരങ്ങൾ (ഷീറ്റിൽ നിന്ന്) ===== */
+const MON=["ജനുവരി","ഫെബ്രുവരി","മാർച്ച്","ഏപ്രിൽ","മേയ്","ജൂൺ","ജൂലൈ","ഓഗസ്റ്റ്","സെപ്റ്റംബർ","ഒക്ടോബർ","നവംബർ","ഡിസംബർ"];
+const METEORS=[[1,3,"ക്വാഡ്രാന്റിഡ്സ്",80],[4,22,"ലൈറിഡ്സ്",18],[5,6,"എറ്റ അക്വേറിഡ്സ്",50],[7,30,"ദക്ഷിണ ഡെൽറ്റ അക്വേറിഡ്സ്",25],[8,12,"പെർസിഡ്സ്",100],[10,21,"ഓറിയണിഡ്സ്",20],[11,17,"ലിയോണിഡ്സ്",15],[12,14,"ജെമിനിഡ്സ്",150]];
+function nextMeteor(now=new Date()){
+  const t=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  let best=null;
+  for(const y of [t.getFullYear(),t.getFullYear()+1]) for(const [mo,da,n,z] of METEORS){ const d=new Date(y,mo-1,da); if(d>=t&&(!best||d<best.d)) best={d,n,z}; }
+  const days=Math.round((best.d-t)/864e5);
+  return `<b>${best.n}</b> — ${MON[best.d.getMonth()]} ${best.d.getDate()}${days?` (${days} ദിവസം കഴിഞ്ഞ്)`:" (ഇന്ന്)"}<br><span class="note">മണിക്കൂറിൽ ഏകദേശം ${best.z} ഉൽക്കകൾ, ഇരുണ്ട ആകാശത്ത്. ചന്ദ്രപ്രകാശം കുറയ്ക്കും; തീയതി ±1 ദിവസം മാറാം.</span>`;
+}
+function parseCSV(t){
+  const rows=[]; let row=[],cur="",q=false;
+  for(let i=0;i<t.length;i++){ const ch=t[i];
+    if(q){ if(ch==='"'){ if(t[i+1]==='"'){cur+='"';i++} else q=false } else cur+=ch; }
+    else if(ch==='"') q=true; else if(ch===","){row.push(cur);cur=""}
+    else if(ch==="\n"||ch==="\r"){ if(ch==="\r"&&t[i+1]==="\n")i++; row.push(cur);rows.push(row);row=[];cur=""; } else cur+=ch; }
+  if(cur||row.length){row.push(cur);rows.push(row)}
+  return rows;
+}
+function toObjects(rows){
+  const h=(rows[0]||[]).map(x=>x.toLowerCase().replace(/[\s_\-]/g,""));
+  return rows.slice(1).filter(r=>r.some(x=>x.trim())).map(r=>{ const o={}; h.forEach((k,i)=>o[k]=(r[i]||"").trim()); return o; });
+}
+function parseDate(s){
+  s=(s||"").trim(); let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(m) return new Date(+m[1],m[2]-1,+m[3]);
+  m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/); return m?new Date(+m[3],m[2]-1,+m[1]):null;
+}
+function pickRow(rows,now=new Date()){
+  const t=new Date(now.getFullYear(),now.getMonth(),now.getDate()); let best=null,bd=-Infinity,any=null;
+  for(const r of rows){ const d=parseDate(r.date); if(!d){ if(!any) any=r; continue }
+    const x=d-t; if(x===0) return r; if(x<0&&x>bd){bd=x;best=r} }
+  return best||any;
+}
+function driveImg(u){
+  const m=u.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||u.match(/[?&]id=([\w-]+)/);
+  return m&&/drive\.google\.com/.test(u)?`https://lh3.googleusercontent.com/d/${m[1]}`:u;
+}
+function fld(v){
+  if(!v) return "";
+  const i=v.indexOf("|");
+  if(i>0&&/^https?:\/\//.test(v.slice(i+1).trim())) return `<a href="${esc(v.slice(i+1).trim())}" target="_blank" rel="noopener">${esc(v.slice(0,i).trim())}</a>`;
+  if(/^https?:\/\//.test(v)) return `<a href="${esc(v)}" target="_blank" rel="noopener">${esc(v)}</a>`;
+  return esc(v).replace(/\n/g,"<br>");
+}
+const sec=(t,h,open)=>`<details${open?" open":""}><summary>${t}</summary>${h}</details>`;
+function renderDyn(r){
+  let h="";
+  if(r&&r.todayimage) h+=sec("ഇന്നത്തെ ചിത്രം",`<img class="pic" src="${esc(driveImg(r.todayimage))}" alt="">`,true);
+  if(r&&r.todayquestion) h+=sec("ഇന്നത്തെ ചോദ്യം",`<p>${fld(r.todayquestion)}</p>`,true);
+  if(r&&r.skystoriesdocid){ const id=esc(r.skystoriesdocid.replace(/.*\/d\/([\w-]+).*/,"$1"));
+    h+=sec("ആകാശ കഥകൾ",`<div class="doc-slot" data-id="${id}"></div><p><a href="https://docs.google.com/document/d/${id}/pub" target="_blank" rel="noopener">പുതിയ ടാബിൽ തുറക്കുക</a></p>`); }
+  h+=sec("ഉൽക്കാപതനം",`<p>${r&&r.meteor?fld(r.meteor):nextMeteor()}</p>`);
+  if(r&&r.comet) h+=sec("വാൽനക്ഷത്രം",`<p>${fld(r.comet)}</p>`);
+  if(r&&r.news) h+=sec("ജ്യോതിശാസ്ത്ര വാർത്ത",`<p>${fld(r.news)}</p>`);
+  if(r&&r.camp) h+=sec("നക്ഷത്ര നിരീക്ഷണ ക്യാമ്പ്",`<p>${fld(r.camp)}</p>`);
+  if(r&&/^https?:|^tel:|^mailto:/.test(r.contactlink||"")) h+=`<a class="btn" href="${esc(r.contactlink)}" target="_blank" rel="noopener">പ്രഭാകരൻ കോവൂരിനോട് സംസാരിക്കാം</a>`;
+  $("dyn").innerHTML=h;
+  document.querySelectorAll("details").forEach(d=>d.addEventListener("toggle",()=>{ const s=d.querySelector(".doc-slot"); if(d.open&&s&&!s.firstChild){ const f=document.createElement("iframe"); f.className="doc"; f.src=`https://docs.google.com/document/d/${s.dataset.id}/pub?embedded=true`; s.appendChild(f); } }));
+}
+renderDyn(null);
+if(INFO_CSV) fetch(INFO_CSV).then(r=>r.text()).then(t=>renderDyn(pickRow(toObjects(parseCSV(t))))).catch(()=>{});
 send({type:"aa-ready"});
 </script>
 </body>

@@ -2,6 +2,11 @@
 <html lang="ml">
 <head>
 <meta charset="UTF-8">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#050811">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>AASTRORIYAM — ലൈവ് സ്കൈ മാപ്പ്</title>
 <style>
@@ -93,6 +98,7 @@ button.gold.active{background:rgba(251,191,36,.2);border-color:var(--accent2);co
   <button id="gpsBtn">ലൊക്കേഷൻ (GPS)</button>
   <button id="compassBtn">കോമ്പസ്</button>
   <button id="resetViewBtn">സെന്റർ</button>
+  <button id="toggleFullBtn">പൂർണ്ണ സ്ക്രീൻ</button>
   <button id="toggleCsvBtn">ഷീറ്റ്</button>
   <button id="togglePanBtn">പഞ്ചാംഗം</button>
   <button id="toggleDrawerBtn" class="active">ചെക്ക് ലിസ്റ്റ്</button>
@@ -229,11 +235,11 @@ function rahuKalam(sr,ss){
 }
 const fmt=t=>t?new Date(t).toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit",hour12:true}):"—";
 const fmtD=t=>fmt(t)+(new Date(t).toDateString()!==new Date().toDateString()?` (${new Date(t).getDate()}/${new Date(t).getMonth()+1})`:"");
-let panCache={k:-1}, wantMoon=false, wantPan=false, infoOpen=false;
-try{ const st=JSON.parse(localStorage.getItem("aa_info")||"{}"); wantMoon=!!st.moon; wantPan=!!st.pan; }catch{}
-const saveInfo=()=>{ try{localStorage.setItem("aa_info",JSON.stringify({moon:wantMoon,pan:wantPan}))}catch{} };
+let panCache={k:-1}, wantMoon=false, wantPan=false, wantGraha=false, infoOpen=false;
+try{ const st=JSON.parse(localStorage.getItem("aa_info")||"{}"); wantMoon=!!st.moon; wantPan=!!st.pan; wantGraha=!!st.graha; }catch{}
+const saveInfo=()=>{ try{localStorage.setItem("aa_info",JSON.stringify({moon:wantMoon,pan:wantPan,graha:wantGraha}))}catch{} };
 const DIRS=["വടക്ക്","വടക്ക്-കിഴക്ക്","കിഴക്ക്","തെക്ക്-കിഴക്ക്","തെക്ക്","തെക്ക്-പടിഞ്ഞാറ്","പടിഞ്ഞാറ്","വടക്ക്-പടിഞ്ഞാറ്"];
-function infoData(){
+function infoData0(){
   const now=Date.now(), E=ephem(now), mo=E.find(o=>o.key==="moon");
   const out={loc:`${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E`,wantMoon,wantPan};
   const rs=(wantMoon||wantPan)?riseSet(dayStartMs()):null;
@@ -254,6 +260,21 @@ function infoData(){
   }
   return out;
 }
+const EPSD=23.4393, GN=["സൂ","ച","കു","ബു","ഗു","ശു","ശ","രാ","കേ"], GK=["sun","moon","mars","mercury","jupiter","venus","saturn","rahu","ketu"];
+const eclLon=b=>rev(Math.atan2(Math.sin(b.ra*15*D)*Math.cos(EPSD*D)+Math.tan(b.dec*D)*Math.sin(EPSD*D),Math.cos(b.ra*15*D))/D);
+function grahaData(){
+  const now=Date.now(), E=ephem(now), ay=E.find(o=>o.key==="moon").ayan, rs=riseSet(dayStartMs());
+  const th=getLST(now)*15*D, e=EPSD*D, asc=rev(Math.atan2(Math.cos(th),-(Math.sin(th)*Math.cos(e)+Math.tan(lat*D)*Math.sin(e)))/D);
+  const altAt=(k,t)=>{ const b=ephem(t).find(o=>o.key===k), al=horiz(b.ra,b.dec,getLST(t))[1]; return (al-(b.par?b.par*Math.cos(al):0))/D; };
+  const vis=k=>{ if(k==="sun"||k==="rahu"||k==="ketu"||!rs.sun.rise||!rs.sun.set) return "";
+    const ev=altAt(k,rs.sun.set+36e5)>8, mo=altAt(k,rs.sun.rise-36e5)>8;
+    return ev&&mo?"രാത്രി മുഴുവൻ":ev?"സന്ധ്യയ്ക്ക് കാണാം":mo?"പ്രഭാതത്തിൽ കാണാം":"കാണാനാവില്ല"; };
+  const items=GK.map((k,i)=>{ const b=E.find(o=>o.key===k), sd=rev((b.ring?b.lon:eclLon(b))-ay), r=rs[k]||{};
+    return {n:GN[i],name:b.ml,r:Math.floor(sd/30),d:sd%30,rise:fmt(r.rise),set:fmt(r.set),vis:vis(k)}; });
+  const sa=rev(asc-ay);
+  return {time:new Date(now).toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"short"}),lagna:{r:Math.floor(sa/30),d:sa%30},items};
+}
+function infoData(){ const o=infoData0(); o.wantGraha=wantGraha; if(wantGraha) o.graha=grahaData(); return o; }
 function pushInfo(){ if(!infoOpen) return; const f=$("infoFrame").contentWindow; if(f) f.postMessage({type:"aa-data",data:infoData()},"*"); }
 function openInfo(open){
   infoOpen=open; $("infoPanel").classList.toggle("hide",!open);
@@ -266,6 +287,7 @@ window.addEventListener("message",e=>{
   if(e.data.type==="aa-set"){
     if(e.data.key==="moon") wantMoon=!!e.data.on;
     if(e.data.key==="pan") wantPan=!!e.data.on;
+    if(e.data.key==="graha") wantGraha=!!e.data.on;
     saveInfo(); pushInfo();
   }
 });
@@ -607,11 +629,11 @@ function stopCompass(){
   window.removeEventListener(orientEvt,handleOrientation);
   compassWanted=false; compassOn=false; $("compassBtn").classList.remove("active");
 }
-$("compassBtn").onclick=()=>compassWanted?stopCompass():startCompass(true);
+$("compassBtn").onclick=()=>{ if(compassWanted) stopCompass(); else { startCompass(true); goFull(); } };
 startCompass(false);
 window.addEventListener("pointerdown",function f(e){
   if(e.target.id==="compassBtn") return;
-  window.removeEventListener("pointerdown",f); startCompass(true);
+  window.removeEventListener("pointerdown",f); startCompass(true); if(FULLPREF()) goFull();
 });
 
 // ---- Google Sheet (CSV): മലയാളം പേര്, വിഭാഗം, നക്ഷത്രം, പ്രധാന നക്ഷത്രങ്ങൾ, ചിത്രം URL ----
@@ -666,6 +688,11 @@ $("toggleCsvBtn").onclick=function(){ const c=$("csvBar"); c.classList.toggle("h
 $("togglePanBtn").onclick=()=>{ wantPan=true; saveInfo(); openInfo(true); pushInfo(); };
 $("moreBtn").onclick=()=>openInfo(!infoOpen);
 setInterval(pushInfo,1000);
+const FULLPREF=()=>{ try{ return localStorage.getItem("aa_full")!=="0"; }catch{ return true; } };
+function goFull(){ const el=document.documentElement; try{ if(!document.fullscreenElement&&el.requestFullscreen) el.requestFullscreen({navigationUI:"hide"}).catch(()=>{}); }catch{} }
+$("toggleFullBtn").onclick=function(){ try{ if(document.fullscreenElement){ document.exitFullscreen(); localStorage.setItem("aa_full","0"); } else { goFull(); localStorage.setItem("aa_full","1"); } }catch{} };
+document.addEventListener("fullscreenchange",()=>{ $("toggleFullBtn").classList.toggle("active",!!document.fullscreenElement); needs=true; });
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 </body>
 </html>
