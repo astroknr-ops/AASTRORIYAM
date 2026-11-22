@@ -74,12 +74,22 @@ html.night{filter:sepia(1) saturate(4) hue-rotate(-40deg) brightness(.8)}
 #hud{position:fixed;top:10px;right:10px;z-index:15;padding:6px 9px;border-radius:10px;background:var(--panel);border:1px solid var(--border);font:10.5px/1.5 system-ui;color:#cbd5e1;pointer-events:none;text-align:right;display:none}
 #hud b{color:var(--accent2);font-weight:600}
 #toast{position:fixed;left:50%;bottom:78px;transform:translateX(-50%);z-index:40;padding:6px 12px;border-radius:999px;background:rgba(11,18,36,.95);border:1px solid var(--border);font-size:12px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+.footer{position:fixed;left:10px;right:70px;bottom:10px;z-index:20;padding:6px 10px;border-radius:12px;background:var(--panel);border:1px solid var(--border);backdrop-filter:blur(10px)}
+.footer .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.footer h1{font-size:13px;color:var(--accent)}
+.footer small{font-size:10px;color:var(--muted)}
+.footer .more{margin:0;padding:2px 8px}
+.footer .copy{margin-top:2px;font-size:10px;line-height:1.4;color:var(--muted)}
+.infopanel{top:auto;bottom:calc(var(--fh,76px) + 18px);height:min(520px,calc(100dvh - var(--fh,76px) - 160px))}
+#toast{bottom:calc(var(--fh,76px) + 18px)}
+.toolbar{max-height:calc(100dvh - var(--fh,76px) - 120px)}
+.footer #hud{position:static;display:none;margin-bottom:4px;padding:0 0 4px;border:0;border-bottom:1px solid var(--border);border-radius:0;background:none;text-align:left;font-size:10.5px}
+.footer #hud div{display:inline-block;margin-right:10px}
 </style>
 </head>
 <body>
 <canvas id="sky"></canvas>
 <div class="topbar">
-  <div class="brand"><h1>AASTRORIYAM</h1><small id="statusText">Loading...</small><button id="moreBtn" class="more">കൂടുതൽ വിവരങ്ങൾ ▾</button></div>
   <div class="csv-bar hide" id="csvBar">
     <input id="csvInput" type="url" placeholder="Google Sheet Published CSV URL ഇവിടെ പേസ്റ്റ് ചെയ്യുക...">
     <button id="loadCsvBtn" class="active">Load Sheet</button>
@@ -102,7 +112,12 @@ html.night{filter:sepia(1) saturate(4) hue-rotate(-40deg) brightness(.8)}
   <div class="info-row" id="infoStars"></div><div class="info-row" id="infoCoords"></div>
 </div>
 <div class="infopanel hide" id="infoPanel"><iframe id="infoFrame" title="കൂടുതൽ വിവരങ്ങൾ"></iframe></div>
-<div id="hud"></div><div id="toast"></div>
+<div id="toast"></div>
+<div class="footer" id="footer">
+  <div id="hud"></div>
+  <div class="row"><h1>AASTRORIYAM</h1><small id="statusText">Loading...</small><button id="moreBtn" class="more">കൂടുതൽ വിവരങ്ങൾ ▴</button></div>
+  <div class="copy">© 2026 ആസ്ട്രോ കണ്ണൂർ &nbsp;•&nbsp; പകർപ്പവകാശം സംരക്ഷിതം<br>ആസ്ട്രോ കണ്ണൂരിനു വേണ്ടി നിർമ്മിച്ചത് &nbsp;•&nbsp; നിർമ്മാണം: പ്രഭാകരൻ കോവൂർ</div>
+</div>
 <button class="fab" id="menuBtn">☰</button>
 <div class="toolbar" id="toolbar">
   <button id="toggleLinesBtn" class="active">രാശി വരകൾ</button>
@@ -296,7 +311,7 @@ function infoData(){ const o=infoData0(); o.wantGraha=wantGraha; if(wantGraha) o
 function pushInfo(){ if(!infoOpen) return; const f=$("infoFrame").contentWindow; if(f) f.postMessage({type:"aa-data",data:infoData()},"*"); }
 function openInfo(open){
   infoOpen=open; $("infoPanel").classList.toggle("hide",!open);
-  $("moreBtn").textContent=open?"കൂടുതൽ വിവരങ്ങൾ ▴":"കൂടുതൽ വിവരങ്ങൾ ▾";
+  $("moreBtn").textContent=open?"കൂടുതൽ വിവരങ്ങൾ ▾":"കൂടുതൽ വിവരങ്ങൾ ▴";
   if(open){ const fr=$("infoFrame"); if(!fr.getAttribute("src")) fr.src="info.html"; else pushInfo(); }
 }
 window.addEventListener("message",e=>{
@@ -732,7 +747,7 @@ document.addEventListener("visibilitychange",()=>{ if(SET.awake&&document.visibi
   <label><input type="checkbox" id="cAz">ഉയരം/ദിശ ഗ്രിഡ് (Alt-Az)</label>
   <label><input type="checkbox" id="cGround">ഭൂമി + സന്ധ്യാ വെളിച്ചം</label>
   <label><input type="checkbox" id="cNames">നക്ഷത്ര പേരുകൾ</label>
-  <label><input type="checkbox" id="cHud">മുകളിൽ വിവരപ്പെട്ടി (Alt/Az/RA/Dec)</label>
+  <label><input type="checkbox" id="cHud">താഴെ വിവരപ്പെട്ടി (ഉയരം/ദിശ/RA/Dec)</label>
   <label><input type="checkbox" id="cNight">രാത്രി (ചുവപ്പ്) മോഡ്</label>
   <label><input type="checkbox" id="cAwake">സ്ക്രീൻ ഓഫാകാതിരിക്കട്ടെ</label>`;
   document.body.appendChild(sp);
@@ -865,6 +880,20 @@ const toLocal=ms=>new Date(ms-new Date(ms).getTimezoneOffset()*6e4).toISOString(
   setTimeout(()=>{ const s=$("statusText"); if(s) s.style.display="none"; },7000);
   window.addEventListener("pointerup",function g(){ window.removeEventListener("pointerup",g); if(typeof FULLPREF==="function"&&FULLPREF()) goFull(); });
 })();
+// ---- മെനു ബാർ: 10 സെക്കൻഡ് പ്രവർത്തനമില്ലെങ്കിൽ സ്വയം മറയും ----
+let menuTimer=null;
+function menuShow(show){
+  $("toolbar").classList.toggle("hide",!show);
+  $("menuBtn").textContent=show?"✕":"☰";
+  clearTimeout(menuTimer);
+  if(show) menuTimer=setTimeout(()=>menuShow(false),10000);
+}
+$("menuBtn").onclick=()=>menuShow($("toolbar").classList.contains("hide"));
+document.addEventListener("pointerdown",e=>{ if(!$("toolbar").classList.contains("hide")&&e.target.closest(".toolbar,.pan")) menuShow(true); },true);
+menuShow(true);
+const setFH=()=>document.documentElement.style.setProperty("--fh",$("footer").offsetHeight+"px");
+if(window.ResizeObserver) new ResizeObserver(setFH).observe($("footer"));
+setFH();
 </script>
 </body>
 </html>
