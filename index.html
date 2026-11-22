@@ -60,6 +60,20 @@ button.gold.active{background:rgba(251,191,36,.2);border-color:var(--accent2);co
 .infopanel{position:fixed;left:10px;top:108px;width:330px;max-width:calc(100vw - 20px);height:min(520px,calc(100dvh - 200px));z-index:26;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--panel);backdrop-filter:blur(10px)}
 .infopanel.hide{display:none}
 .infopanel iframe{width:100%;height:100%;border:0;background:transparent}
+.toolbar{z-index:28}
+.pan label{display:block;margin:7px 0;color:var(--text)}
+.pan input[type=range]{width:100%}
+.pan input[type=checkbox]{margin-right:6px;accent-color:var(--accent)}
+html.night{filter:sepia(1) saturate(4) hue-rotate(-40deg) brightness(.8)}
+.toolbar{left:8px;right:auto;bottom:auto;top:96px;width:50px;max-height:calc(100dvh - 190px);overflow-y:auto;flex-direction:column;flex-wrap:nowrap;align-items:center;gap:5px;padding:6px}
+.toolbar button{width:36px;height:36px;padding:0;font-size:17px;line-height:1;border-radius:12px;flex:none}
+.brand{padding:5px 10px}.brand h1{font-size:13px}.brand small{font-size:10px}
+.pan{left:68px;width:min(300px,calc(100vw - 80px))}
+.infopanel{left:68px;width:min(330px,calc(100vw - 80px))}
+.drawer{top:118px}
+#hud{position:fixed;top:10px;right:10px;z-index:15;padding:6px 9px;border-radius:10px;background:var(--panel);border:1px solid var(--border);font:10.5px/1.5 system-ui;color:#cbd5e1;pointer-events:none;text-align:right;display:none}
+#hud b{color:var(--accent2);font-weight:600}
+#toast{position:fixed;left:50%;bottom:78px;transform:translateX(-50%);z-index:40;padding:6px 12px;border-radius:999px;background:rgba(11,18,36,.95);border:1px solid var(--border);font-size:12px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -73,7 +87,7 @@ button.gold.active{background:rgba(251,191,36,.2);border-color:var(--accent2);co
 </div>
 <aside class="drawer" id="drawer">
   <div class="drawer-head">
-    <div class="drawer-title"><span>88 കോൺസ്റ്റലേഷൻ ചെക്ക് ലിസ്റ്റ്</span><span id="selectedCount">0 / 88</span></div>
+    <div class="drawer-title"><span>88 കോൺസ്റ്റലേഷൻ ചെക്ക് ലിസ്റ്റ്</span><span><span id="selectedCount">0 / 88</span> <button id="drawerClose" style="padding:2px 7px;font-size:11px">✕</button></span></div>
     <div class="drawer-actions">
       <button id="btnZodiacOnly">12 രാശി</button><button id="btnKeyOnly">പ്രധാനപ്പെട്ടവ</button>
       <button id="btnAll">എല്ലാം (88)</button><button id="btnClear">ഒഴിവാക്കുക</button>
@@ -88,8 +102,9 @@ button.gold.active{background:rgba(251,191,36,.2);border-color:var(--accent2);co
   <div class="info-row" id="infoStars"></div><div class="info-row" id="infoCoords"></div>
 </div>
 <div class="infopanel hide" id="infoPanel"><iframe id="infoFrame" title="കൂടുതൽ വിവരങ്ങൾ"></iframe></div>
+<div id="hud"></div><div id="toast"></div>
 <button class="fab" id="menuBtn">☰</button>
-<div class="toolbar hide" id="toolbar">
+<div class="toolbar" id="toolbar">
   <button id="toggleLinesBtn" class="active">രാശി വരകൾ</button>
   <button id="toggleArtBtn" class="gold active">ചിത്രം</button>
   <button id="toggleLabelsBtn" class="active">പേരുകൾ</button>
@@ -99,11 +114,13 @@ button.gold.active{background:rgba(251,191,36,.2);border-color:var(--accent2);co
   <button id="compassBtn">കോമ്പസ്</button>
   <button id="resetViewBtn">സെന്റർ</button>
   <button id="toggleFullBtn">പൂർണ്ണ സ്ക്രീൻ</button>
+  <button id="toggleSetBtn">ക്രമീകരണം</button>
   <button id="toggleCsvBtn">ഷീറ്റ്</button>
   <button id="togglePanBtn">പഞ്ചാംഗം</button>
   <button id="toggleDrawerBtn" class="active">ചെക്ക് ലിസ്റ്റ്</button>
 </div>
 <script>
+const _rn=Date.now.bind(Date); let TOFF=0; Date.now=()=>_rn()+TOFF;
 // AASTRORIYAM. Constellation line data: d3-celestial by Olaf Frohn, BSD 3-Clause License, Copyright (c) 2015 Olaf Frohn. https://github.com/ofrohn/d3-celestial
 // ---- ഡാറ്റ (ബിൽഡ് സ്ക്രിപ്റ്റ് ചേർത്തത്): യഥാർത്ഥ നക്ഷത്ര സ്ഥാനങ്ങൾ [RA മണിക്കൂർ, Dec ഡിഗ്രി, മാഗ്നിറ്റ്യൂഡ്, B-V]
 const CON = {"AND":{"en":"Andromeda","c":[0.498,38.14],"l":[[[2.065,42.33],[1.162,35.62],[0.655,30.86],[0.14,29.09]],[[0.953,23.42],[0.789,24.27],[0.643,29.31],[0.655,30.86],[0.615,33.72],[23.636,43.27],[23.032,42.33]],[[23.636,43.27],[23.673,44.33],[23.626,46.46]],[[1.162,35.62],[0.946,38.5],[0.83,41.08],[1.158,47.24],[1.633,48.63]],[[23.673,44.33],[23.767,46.42]]]},"ANT":{"en":"Antlia","c":[10.295,-34.72],"l":[[[9.487,-35.95],[10.453,-31.07],[10.945,-37.14]]]},"APS":{"en":"Apus","c":[16.103,-78.54],"l":[[[14.798,-79.04],[16.339,-78.7],[16.718,-77.52],[16.558,-78.9]]]},"AQR":{"en":"Aquarius","c":[22.387,-7.22],"l":[[[20.795,-9.5],[20.878,-8.98],[21.526,-5.57],[22.096,-0.32],[22.361,-1.39],[22.481,-0.02],[22.589,-0.12],[22.877,-7.58],[23.298,-9.18],[23.157,-21.17]],[[21.526,-5.57],[22.107,-13.87]],[[22.096,-0.32],[22.281,-7.78]],[[22.481,-0.02],[22.421,1.38]],[[23.383,-20.1],[23.298,-9.18],[23.696,-17.82]]]},"AQL":{"en":"Aquila","c":[19.649,5.01],"l":[[[19.771,10.61],[19.846,8.87],[19.922,6.41],[20.188,-0.82],[19.875,1.01],[19.425,3.11],[19.09,13.86],[19.846,8.87],[19.425,3.11],[19.104,-4.88]]]},"ARA":{"en":"Ara","c":[17.242,-55.81],"l":[[[17.423,-56.38],[17.518,-60.68],[16.83,-59.04],[16.977,-55.99],[16.993,-53.16],[17.531,-49.88],[17.422,-55.53]]]},"ARI":{"en":"Aries","c":[2.189,22.7],"l":[[[2.833,27.26],[2.12,23.46],[1.911,20.81],[1.892,19.29]]]},"AUR":{"en":"Auriga","c":[5.463,41.94],"l":[[[5.992,44.95],[5.278,46.0],[5.109,41.23],[4.95,33.17],[5.438,28.61],[5.995,37.21],[5.992,44.95],[5.992,54.28],[5.278,46.0],[5.033,43.82],[5.041,41.08]]]},"BOO":{"en":"Boötes","c":[14.449,32.77],"l":[[[13.788,17.46],[13.911,18.4],[14.261,19.18],[14.53,30.37],[14.535,38.31],[15.032,40.39],[15.258,33.31],[14.75,27.07],[14.261,19.18],[14.686,13.73]],[[14.535,38.31],[14.273,46.09],[14.224,51.79],[14.42,51.85],[14.273,46.09]]]},"CAE":{"en":"Caelum","c":[4.741,-39.86],"l":[[[4.514,-44.95],[4.676,-41.86],[4.701,-37.14],[5.073,-35.48]]]},"CAM":{"en":"Camelopardalis","c":[4.92,65.55],"l":[[[4.955,53.75],[5.057,60.44],[4.901,66.34],[3.839,71.33],[3.825,65.53],[3.484,59.94]],[[4.901,66.34],[6.314,69.32],[7.001,76.98]]]},"CNC":{"en":"Cancer","c":[8.707,17.93],"l":[[[8.975,11.86],[8.745,18.15],[8.721,21.47],[8.778,28.77]],[[8.745,18.15],[8.275,9.19]]]},"CVN":{"en":"Canes Venatici","c":[12.747,39.84],"l":[[[12.933,38.31],[12.562,41.36]]]},"CMA":{"en":"Canis Major","c":[6.914,-21.86],"l":[[[6.378,-17.96],[6.752,-16.72],[7.05,-23.83],[7.14,-26.39],[7.029,-27.93],[6.977,-28.97],[6.339,-30.06]],[[7.402,-29.3],[7.14,-26.39]],[[6.752,-16.72],[6.936,-17.05],[7.063,-15.63],[6.903,-12.04],[6.936,-17.05]]]},"CMI":{"en":"Canis Minor","c":[7.554,6.75],"l":[[[7.655,5.22],[7.453,8.29]]]},"CAP":{"en":"Capricornus","c":[20.947,-18.1],"l":[[[20.294,-12.51],[20.35,-14.78],[20.481,-17.81],[20.768,-25.27],[20.864,-26.92],[21.444,-22.41],[21.784,-16.13],[21.668,-16.66],[21.371,-16.83],[21.099,-17.23],[20.294,-12.51]]]},"CAR":{"en":"Carina","c":[9.628,-59.24],"l":[[[6.629,-43.2],[6.399,-52.7],[9.22,-69.72],[10.229,-70.04],[10.716,-64.39],[10.534,-61.69],[10.285,-61.33],[9.285,-59.28],[8.375,-59.51],[7.946,-52.98],[8.159,-47.34],[8.745,-54.71],[9.285,-59.28]],[[10.716,-64.39],[11.109,-62.42],[11.143,-61.95],[11.21,-60.32],[11.143,-58.98],[10.892,-58.85],[10.534,-61.69]]]},"CAS":{"en":"Cassiopeia","c":[1.022,60.06],"l":[[[1.907,63.67],[1.43,60.24],[0.945,60.72],[0.675,56.54],[0.153,59.15]]]},"CEN":{"en":"Centaurus","c":[13.333,-48.69],"l":[[[11.35,-54.49],[12.139,-50.72],[12.467,-50.23],[12.692,-48.96],[13.665,-53.47],[13.926,-47.29],[13.827,-42.47],[13.825,-41.69],[14.111,-36.37],[14.592,-42.16],[14.986,-42.1]],[[13.825,-41.69],[13.343,-36.71]],[[14.66,-60.84],[13.665,-53.47],[14.064,-60.37]],[[12.467,-50.23],[12.194,-52.37],[11.529,-59.44]]]},"CEP":{"en":"Cepheus","c":[21.906,64.12],"l":[[[20.493,62.99],[20.755,61.84],[21.31,62.59],[21.725,58.78],[22.251,57.04],[22.181,58.2],[22.486,58.42],[22.828,66.2],[23.656,77.63],[21.478,70.56],[21.31,62.59]],[[21.478,70.56],[22.828,66.2]]]},"CET":{"en":"Cetus","c":[2.082,-2.55],"l":[[[2.722,3.24],[2.598,5.59],[2.469,8.46],[2.749,10.11],[2.995,8.91],[3.038,4.09],[2.722,3.24],[2.658,0.33],[2.322,-2.98],[1.858,-10.34],[1.734,-15.94],[0.726,-17.99],[0.324,-8.82],[1.143,-10.18],[1.4,-8.18],[1.858,-10.34]]]},"CHA":{"en":"Chamaeleon","c":[10.758,-78.69],"l":[[[8.309,-76.92],[10.591,-78.61],[10.755,-80.47],[12.306,-79.31],[11.994,-78.22],[10.591,-78.61]]]},"CIR":{"en":"Circinus","c":[15.13,-61.03],"l":[[[15.292,-58.8],[14.708,-64.98],[15.39,-59.32]]]},"COL":{"en":"Columba","c":[5.872,-36.22],"l":[[[6.369,-33.44],[5.849,-35.77],[5.661,-34.07],[5.52,-35.47]],[[5.849,-35.77],[5.986,-42.82]]]},"COM":{"en":"Coma Berenices","c":[12.938,24.56],"l":[[[13.166,17.53],[13.198,27.88],[12.449,28.27]]]},"CRA":{"en":"Corona Austrina","c":[18.998,-39.97],"l":[[[18.979,-37.11],[19.107,-37.06],[19.158,-37.9],[19.167,-39.34],[19.139,-40.5],[19.052,-42.1],[18.826,-43.43],[18.558,-42.31]]]},"CRB":{"en":"Corona Borealis","c":[15.731,28.04],"l":[[[15.549,31.36],[15.464,29.11],[15.578,26.71],[15.712,26.3],[15.827,26.07],[15.96,26.88],[16.024,29.85]]]},"CRV":{"en":"Corvus","c":[12.302,-21.24],"l":[[[12.14,-24.73],[12.169,-22.62],[12.263,-17.54],[12.498,-16.52],[12.573,-23.4],[12.169,-22.62]]]},"CRT":{"en":"Crater","c":[11.432,-16.45],"l":[[[11.611,-9.8],[11.41,-10.86],[11.322,-14.78],[10.996,-18.3],[11.194,-22.83],[11.389,-18.78],[11.415,-17.68],[11.746,-18.35],[11.934,-17.15]],[[11.322,-14.78],[11.415,-17.68]]]},"CRU":{"en":"Crux","c":[12.502,-59.66],"l":[[[12.795,-59.69],[12.252,-58.75]],[[12.443,-63.1],[12.519,-57.11]]]},"CYG":{"en":"Cygnus","c":[20.14,40.33],"l":[[[21.216,30.23],[20.77,33.97],[20.37,40.26],[19.75,45.13],[19.495,51.73],[19.285,53.37]],[[20.691,45.28],[20.37,40.26],[19.938,35.08],[19.512,27.96]]]},"DEL":{"en":"Delphinus","c":[20.661,14.6],"l":[[[20.554,11.3],[20.626,14.6],[20.661,15.91],[20.777,16.12],[20.724,15.07],[20.626,14.6]]]},"DOR":{"en":"Dorado","c":[5.158,-59.11],"l":[[[4.267,-51.49],[4.567,-55.05],[5.56,-62.49],[5.746,-65.74],[5.902,-63.09],[5.56,-62.49],[5.092,-57.47],[4.567,-55.05]]]},"DRA":{"en":"Draco","c":[16.955,63.44],"l":[[[17.892,56.87],[17.943,51.49],[17.507,52.3],[17.538,55.17],[17.892,56.87],[19.209,67.66],[18.346,71.34],[17.146,65.71],[16.4,61.51],[16.031,58.57],[15.415,58.97],[14.073,64.38],[12.558,69.79],[11.523,69.33]],[[18.346,71.34],[18.351,72.73]],[[19.209,67.66],[19.803,70.27]]]},"EQU":{"en":"Equuleus","c":[21.226,8.46],"l":[[[21.264,5.25],[21.241,10.01],[21.172,10.13]]]},"ERI":{"en":"Eridanus","c":[3.475,-25.97],"l":[[[5.131,-5.09],[4.758,-3.25],[4.605,-3.35],[4.198,-6.84],[3.967,-13.51],[3.769,-12.1],[3.721,-9.76],[3.549,-9.46],[2.94,-8.9],[2.735,-13.86],[2.752,-18.57],[3.04,-23.62],[3.325,-21.76],[3.563,-21.63],[3.781,-23.25],[4.593,-30.56],[4.401,-34.02],[4.298,-33.8],[3.824,-36.2],[3.618,-40.27],[3.332,-43.07],[2.971,-40.3],[2.678,-39.86],[2.45,-47.7],[2.275,-51.51],[1.933,-51.61],[1.629,-57.24]]]},"FOR":{"en":"Fornax","c":[2.698,-30.23],"l":[[[3.201,-28.99],[2.818,-32.41],[2.075,-29.3]]]},"GEM":{"en":"Gemini","c":[7.07,22.89],"l":[[[6.248,22.51],[6.383,22.51],[6.732,25.13],[7.186,30.25],[7.577,31.89],[7.755,28.03],[7.599,26.9],[7.335,21.98],[7.068,20.57],[6.629,16.4],[6.755,12.9]],[[7.335,21.98],[7.302,16.54]]]},"GRU":{"en":"Grus","c":[22.463,-45.03],"l":[[[23.015,-52.75],[22.809,-51.32],[22.711,-46.88],[22.496,-43.75],[22.137,-46.96],[22.711,-46.88]],[[22.488,-43.5],[22.26,-41.35],[22.102,-39.54],[21.899,-37.36]]]},"HER":{"en":"Hercules","c":[16.968,32.46],"l":[[[16.365,19.15],[16.504,21.49],[16.688,31.6],[16.715,38.92],[16.568,42.44],[16.329,46.31],[16.146,44.93],[15.878,42.45]],[[16.688,31.6],[17.005,30.93]],[[16.715,38.92],[17.251,36.81]],[[17.938,37.25],[17.395,37.15],[17.251,36.81],[17.005,30.93],[17.251,24.84],[17.774,27.72],[17.963,29.25],[18.126,28.76]],[[17.244,14.39],[16.504,21.49]]]},"HOR":{"en":"Horologium","c":[3.047,-54.0],"l":[[[4.233,-42.29],[2.709,-50.8],[2.623,-52.54],[2.678,-54.55],[3.06,-59.74],[2.98,-64.07]]]},"HYA":{"en":"Hydra","c":[10.349,-9.17],"l":[[[8.78,6.42],[8.807,5.84],[8.72,3.4],[8.646,3.34],[8.628,5.7],[8.78,6.42],[8.923,5.95],[9.239,2.31],[9.664,-1.14],[9.46,-8.66],[9.858,-14.85],[10.176,-12.35],[10.435,-16.84],[10.827,-16.19],[11.55,-31.86],[11.882,-33.91],[13.315,-23.17],[14.106,-26.68],[14.838,-27.96]]]},"HYI":{"en":"Hydrus","c":[2.189,-69.61],"l":[[[0.429,-77.25],[3.787,-74.24],[2.66,-68.27],[2.362,-68.66],[1.916,-67.65],[1.98,-61.57]]]},"IND":{"en":"Indus","c":[21.032,-52.23],"l":[[[20.626,-47.29],[20.734,-51.92],[20.913,-58.45],[21.965,-54.99],[21.331,-53.45],[20.626,-47.29]]]},"LAC":{"en":"Lacerta","c":[22.437,46.18],"l":[[[22.393,52.23],[22.522,50.28],[22.492,47.71],[22.35,46.54],[22.508,43.12],[22.675,44.28],[22.492,47.71],[22.409,49.48],[22.393,52.23]],[[22.508,43.12],[22.231,39.71],[22.266,37.75]]]},"LEO":{"en":"Leo","c":[10.48,18.55],"l":[[[10.14,11.97],[10.122,16.76],[10.333,19.84],[11.235,20.52],[11.818,14.57],[11.237,15.43],[10.14,11.97]],[[10.333,19.84],[10.278,23.42],[9.879,26.01],[9.764,23.77]]]},"LMI":{"en":"Leo Minor","c":[10.267,35.27],"l":[[[10.124,35.24],[10.432,33.8],[10.889,34.21],[10.465,36.71],[10.124,35.24],[9.57,36.4]]]},"LEP":{"en":"Lepus","c":[5.542,-17.23],"l":[[[6.103,-14.94],[5.94,-14.17],[5.783,-14.82],[5.546,-17.82],[5.216,-16.21],[5.091,-22.37],[5.471,-20.76],[5.741,-22.45],[5.855,-20.88]],[[5.221,-12.94],[5.216,-16.21],[5.326,-13.18]]]},"LIB":{"en":"Libra","c":[15.312,-19.28],"l":[[[15.068,-25.28],[14.848,-16.04],[15.283,-9.38],[15.592,-14.79],[15.617,-28.14],[15.644,-29.78]],[[14.848,-16.04],[15.592,-14.79]]]},"LUP":{"en":"Lupus","c":[15.46,-41.31],"l":[[[15.849,-33.63],[15.663,-34.41],[15.363,-36.26],[15.356,-40.65],[14.976,-43.13],[14.699,-47.39],[15.205,-52.1],[15.309,-47.88],[15.378,-44.69],[15.586,-41.17],[16.002,-38.4],[16.11,-36.8]],[[15.356,-40.65],[15.586,-41.17]]]},"LYN":{"en":"Lynx","c":[8.112,46.11],"l":[[[6.327,59.01],[6.955,58.42],[7.445,49.21],[8.381,43.19],[9.011,41.78],[9.314,36.8],[9.351,34.39]]]},"LYR":{"en":"Lyra","c":[18.79,36.77],"l":[[[18.746,37.61],[18.74,39.61],[18.616,38.78],[18.746,37.61],[18.908,36.9],[18.982,32.69],[18.835,33.36],[18.746,37.61]]]},"MEN":{"en":"Mensa","c":[5.417,-74.34],"l":[[[6.171,-74.75],[5.531,-76.34],[4.92,-74.94],[5.045,-71.31]]]},"MIC":{"en":"Microscopium","c":[21.023,-36.13],"l":[[[20.833,-33.78],[20.808,-43.99],[21.346,-40.81],[21.299,-32.17],[21.022,-32.26],[20.833,-33.78]]]},"MON":{"en":"Monoceros","c":[6.938,-0.26],"l":[[[7.687,-9.55],[8.143,-2.98],[7.198,-0.49],[6.48,-7.03],[6.248,-6.27]],[[7.198,-0.49],[6.798,2.41],[6.396,4.59],[6.548,7.33],[6.683,9.9]]]},"MUS":{"en":"Musca","c":[12.52,-69.25],"l":[[[11.76,-66.73],[12.293,-67.96],[12.62,-69.14],[12.771,-68.11],[13.038,-71.55],[12.541,-72.13],[12.62,-69.14]]]},"NOR":{"en":"Norma","c":[16.211,-47.46],"l":[[[16.108,-45.17],[16.453,-47.55],[16.331,-50.16],[16.054,-49.23],[16.108,-45.17]]]},"OCT":{"en":"Octans","c":[18.339,-81.53],"l":[[[14.449,-83.67],[22.768,-81.38],[21.691,-77.39],[14.449,-83.67]]]},"OPH":{"en":"Ophiuchus","c":[17.0,-7.95],"l":[[[17.984,-9.77],[17.798,2.71],[17.725,4.57],[17.582,12.56],[16.961,9.38],[16.515,1.98],[16.239,-3.69],[16.305,-4.69],[16.619,-10.57],[17.173,-15.72]],[[16.961,9.38],[16.619,-10.57],[16.519,-16.61],[16.45,-18.46],[16.402,-20.04],[16.426,-23.45]],[[17.725,4.57],[17.173,-15.72],[17.367,-25.0],[17.456,-29.87]]]},"ORI":{"en":"Orion","c":[5.446,6.46],"l":[[[6.126,14.77],[5.906,20.28],[6.065,20.14],[6.199,14.21],[6.04,9.65],[5.92,7.41],[5.419,6.35],[4.915,10.15]],[[4.976,1.71],[4.904,2.44],[4.853,5.61],[4.831,6.96],[4.844,8.9],[4.915,10.15],[4.94,13.51],[5.076,15.4],[5.162,15.6]],[[5.242,-8.2],[5.408,-2.4],[5.533,-0.3],[5.419,6.35],[5.586,9.93],[5.92,7.41],[5.679,-1.94],[5.796,-9.67]],[[5.679,-1.94],[5.604,-1.2],[5.533,-0.3]]]},"PAV":{"en":"Pavo","c":[19.582,-65.19],"l":[[[20.427,-56.74],[20.749,-66.2],[20.145,-66.18],[18.87,-62.19],[18.387,-61.49],[18.143,-63.67],[17.762,-64.72],[18.717,-71.43],[20.01,-72.91],[20.749,-66.2],[21.441,-65.37]]]},"PEG":{"en":"Pegasus","c":[22.773,20.78],"l":[[[22.166,33.18],[22.717,30.22],[23.063,28.08],[0.14,29.09],[0.221,15.18],[23.079,15.21],[22.778,12.17],[22.691,10.83],[22.17,6.2],[21.736,9.88]],[[23.079,15.21],[23.063,28.08],[22.833,24.6],[22.776,23.57],[22.117,25.35],[21.744,25.64]]]},"PER":{"en":"Perseus","c":[3.368,45.0],"l":[[[3.739,32.29],[3.902,31.88],[3.983,35.79],[3.964,40.01],[3.753,42.58],[3.715,47.79],[3.608,48.19],[3.405,49.86],[3.08,53.51],[2.845,55.9],[2.904,52.76],[3.151,49.61],[3.158,44.86],[3.136,40.96],[3.188,39.61],[3.086,38.84],[2.979,39.66],[2.994,41.03],[3.136,40.96]],[[4.11,50.35],[4.248,48.41],[4.144,47.71],[3.715,47.79]],[[3.151,49.61],[2.737,49.23],[1.728,50.69]]]},"PHE":{"en":"Phoenix","c":[0.921,-46.43],"l":[[[0.438,-42.31],[1.101,-46.72],[1.473,-43.32],[1.521,-49.07],[1.14,-55.25],[1.101,-46.72],[0.157,-45.75],[0.438,-42.31]]]},"PIC":{"en":"Pictor","c":[6.14,-56.39],"l":[[[6.803,-61.94],[5.83,-56.17],[5.788,-51.07]]]},"PSC":{"en":"Pisces","c":[0.574,9.58],"l":[[[1.229,24.58],[1.194,30.09],[1.324,27.26],[1.229,24.58],[1.191,21.03],[1.525,15.35],[1.757,9.16],[2.034,2.76],[1.893,3.19],[1.691,5.49],[1.503,6.14],[1.229,7.58],[1.049,7.89],[0.811,7.59],[23.989,6.86],[23.666,5.63],[23.466,6.38],[23.339,5.38],[23.286,3.28],[23.449,1.26],[23.701,1.78],[23.773,3.49],[23.666,5.63]],[[23.286,3.28],[23.065,3.82]]]},"PSA":{"en":"Piscis Austrinus","c":[22.447,-31.14],"l":[[[22.678,-27.04],[22.961,-29.62],[22.932,-32.54],[22.875,-32.88],[22.525,-32.35],[22.14,-32.99],[21.749,-33.03],[21.796,-30.9],[22.14,-32.99],[22.678,-27.04]]]},"PUP":{"en":"Puppis","c":[7.708,-31.0],"l":[[[6.629,-43.2],[7.286,-37.1],[7.59,-28.37],[7.647,-26.8],[7.822,-24.86],[7.948,-22.88],[8.126,-24.3],[8.06,-40.0],[8.159,-47.34]],[[7.822,-24.86],[7.801,-25.94],[7.73,-28.95],[7.59,-28.37]]]},"PYX":{"en":"Pyxis","c":[8.574,-34.05],"l":[[[8.06,-40.0],[8.668,-35.31],[8.727,-33.19],[8.842,-27.71]]]},"RET":{"en":"Reticulum","c":[4.094,-62.09],"l":[[[4.24,-62.47],[4.275,-59.3],[3.979,-61.4],[3.737,-64.81],[4.24,-62.47]]]},"SGE":{"en":"Sagitta","c":[19.782,18.41],"l":[[[19.668,18.01],[19.79,18.53],[19.979,19.49]],[[19.684,17.48],[19.79,18.53]]]},"SGR":{"en":"Sagittarius","c":[18.99,-27.64],"l":[[[18.294,-36.76],[18.403,-34.38],[18.35,-29.83],[18.466,-25.42],[18.229,-21.06]],[[19.377,-44.46],[19.398,-40.62],[19.044,-29.88],[18.761,-26.99],[18.466,-25.42]],[[19.921,-41.87],[19.996,-35.28],[19.931,-26.3],[19.612,-24.88],[19.421,-24.51],[19.259,-25.26],[18.921,-26.3],[18.761,-26.99],[18.35,-29.83],[18.097,-30.42],[18.403,-34.38],[19.044,-29.88],[19.116,-27.67],[18.921,-26.3],[19.078,-21.74],[19.163,-21.02],[19.294,-18.95],[19.361,-17.85],[19.362,-15.96]],[[19.078,-21.74],[18.962,-21.11],[18.903,-22.74],[18.921,-26.3]]]},"SCO":{"en":"Scorpius","c":[16.801,-32.57],"l":[[[15.981,-26.11],[16.006,-22.62],[16.091,-19.81]],[[16.006,-22.62],[16.353,-25.59],[16.49,-26.43],[16.598,-28.22],[16.836,-34.29],[16.865,-38.05],[16.91,-42.36],[17.203,-43.24],[17.622,-43.0],[17.793,-40.13],[17.708,-39.03],[17.56,-37.1]]]},"SCL":{"en":"Sculptor","c":[23.914,-31.96],"l":[[[0.977,-29.36],[23.815,-28.13],[23.314,-32.53],[23.55,-37.82]]]},"SCT":{"en":"Scutum","c":[18.63,-8.97],"l":[[[18.587,-8.24],[18.786,-4.75],[18.705,-9.05],[18.487,-14.57],[18.587,-8.24]]]},"SER":{"en":"Serpens Cauda","c":[16.701,3.62],"l":[[[15.77,15.42],[15.693,19.67],[15.812,18.14],[15.941,15.66],[15.77,15.42],[15.58,10.54],[15.738,6.43],[15.847,4.48],[16.239,-3.69]],[[17.173,-15.72],[17.626,-15.4],[17.984,-9.77],[18.051,-8.18],[18.355,-2.9],[18.937,4.2]]]},"SEX":{"en":"Sextans","c":[10.251,-2.96],"l":[[[10.132,-0.37],[9.875,-8.11],[10.491,-2.74],[10.505,-0.64]]]},"TAU":{"en":"Taurus","c":[4.261,14.11],"l":[[[5.627,21.14],[4.599,16.51],[4.478,15.87],[4.33,15.63],[4.382,17.54],[4.477,19.18],[5.438,28.61]],[[4.33,15.63],[4.011,12.49],[3.453,9.73],[4.053,5.99]],[[3.453,9.73],[3.414,9.03],[3.615,0.4]]]},"TEL":{"en":"Telescopium","c":[18.373,-47.0],"l":[[[18.187,-45.95],[18.45,-45.97],[18.481,-49.07]]]},"TRI":{"en":"Triangulum","c":[2.054,32.0],"l":[[[1.885,29.58],[2.159,34.99],[2.289,33.85],[1.885,29.58]]]},"TRA":{"en":"Triangulum Australe","c":[16.214,-67.54],"l":[[[16.811,-69.03],[15.919,-63.43],[15.315,-68.68],[16.811,-69.03]]]},"TUC":{"en":"Tucana","c":[23.317,-62.45],"l":[[[22.308,-60.26],[23.29,-58.24],[0.526,-62.96],[0.335,-64.87],[23.999,-65.58],[22.456,-64.97],[22.308,-60.26]]]},"UMA":{"en":"Ursa Major","c":[10.987,51.55],"l":[[[12.257,57.03],[11.062,61.75],[11.031,56.38],[11.897,53.69],[12.257,57.03],[12.9,55.96],[13.399,54.93],[13.792,49.31]],[[11.897,53.69],[11.768,47.78],[11.308,33.09],[11.303,31.53]],[[11.768,47.78],[11.161,44.5],[10.372,41.5]],[[11.161,44.5],[10.285,42.91]],[[11.062,61.75],[9.525,63.06],[8.504,60.72],[9.85,59.04],[11.031,56.38]],[[11.031,56.38],[9.868,54.06],[9.548,51.68],[8.987,48.04]],[[9.06,47.16],[9.548,51.68]]]},"UMI":{"en":"Ursa Minor","c":[17.348,79.4],"l":[[[15.734,77.79],[16.292,75.76],[15.345,71.83],[14.845,74.16],[15.734,77.79],[16.766,82.04],[17.537,86.59],[2.53,89.26]]]},"VEL":{"en":"Vela","c":[9.486,-48.38],"l":[[[8.745,-54.71],[9.369,-55.01],[9.948,-54.57],[10.779,-49.42],[10.246,-42.12],[9.512,-40.47],[9.133,-43.43],[8.159,-47.34]]]},"VIR":{"en":"Virgo","c":[13.227,-0.8],"l":[[[11.764,6.53],[11.845,1.76],[12.332,-0.67],[12.694,-1.45],[13.166,-5.54],[13.42,-11.16],[14.267,-6.0],[14.718,-5.66]],[[13.036,10.96],[12.927,3.4],[12.694,-1.45]],[[13.166,-5.54],[13.578,-0.6],[14.027,1.54],[14.771,1.89]]]},"VOL":{"en":"Volans","c":[8.172,-67.81],"l":[[[9.041,-66.4],[8.429,-66.14],[8.132,-68.62],[7.281,-67.96],[7.146,-70.5],[8.132,-68.62],[9.041,-66.4]]]},"VUL":{"en":"Vulpecula","c":[19.784,25.14],"l":[[[19.27,21.39],[19.478,24.66],[19.891,24.08],[20.018,27.75],[20.263,27.81]]]}};
@@ -112,6 +129,7 @@ const ML = "AND:ആൻഡ്രോമിഡ;ANT:ആന്റ്ലിയ;APS:ആ
 const ZODIAC = new Set(["AQR","ARI","CNC","CAP","GEM","LEO","LIB","PSC","SGR","SCO","TAU","VIR"]);
 const KEY = new Set(["ARI","TAU","GEM","CNC","LEO","VIR","LIB","SCO","SGR","CAP","AQR","PSC","ORI","UMA","UMI","CAS","CMA","CRU","CYG","LYR","PER","PEG","AND","AQL","CRV"]);
 
+const SET=Object.assign({mag:5,ssize:1,lab:12,grid:false,ecl:false,night:false,awake:false,smooth:.3,ground:true,hud:true,azgrid:false,names:true},(()=>{try{return JSON.parse(localStorage.getItem("aa_set"))||{}}catch{return {}}})());
 const cons = Object.keys(CON).map(k => ({
   abbr:k, english:CON[k].en, malayalam:ML[k]||CON[k].en, zodiac:ZODIAC.has(k),
   nak:"", stars:"", artUrl:"", img:null, lines:CON[k].l, ra:CON[k].c[0], dec:CON[k].c[1],
@@ -228,7 +246,7 @@ function riseSet(dayStart){
   }
   rsCache={key,res}; return res;
 }
-const dayStartMs=()=>{const d=new Date(); d.setHours(0,0,0,0); return d.getTime()};
+const dayStartMs=()=>{const d=new Date(Date.now()); d.setHours(0,0,0,0); return d.getTime()};
 function rahuKalam(sr,ss){
   const i=[8,2,7,5,6,4,3][new Date(sr).getDay()]-1, seg=(ss-sr)/8;
   return [sr+i*seg, sr+(i+1)*seg];
@@ -328,9 +346,11 @@ const EL={
  venus:[76.6799,2.4659e-5,3.3946,2.75e-8,54.891,1.38374e-5,0.72333,0.006773,-1.302e-9,48.0052,1.6021302244],
  mars:[49.5574,2.11081e-5,1.8497,-1.78e-8,286.5016,2.92961e-5,1.523688,0.093405,2.516e-9,18.6021,0.5240207766],
  jupiter:[100.4542,2.76854e-5,1.303,-1.557e-7,273.8777,1.64505e-5,5.20256,0.048498,4.469e-9,19.895,0.0830853001],
- saturn:[113.6634,2.3898e-5,2.4886,-1.081e-7,339.3939,2.97661e-5,9.55475,0.055546,-9.499e-9,316.967,0.0334442282]
+ saturn:[113.6634,2.3898e-5,2.4886,-1.081e-7,339.3939,2.97661e-5,9.55475,0.055546,-9.499e-9,316.967,0.0334442282],
+ uranus:[74.0005,1.3978e-5,0.7733,1.9e-8,96.6612,3.0565e-5,19.18171,0.047318,7.45e-9,142.5905,0.011725806],
+ neptune:[131.7806,3.0173e-5,1.77,-2.55e-7,272.8461,-6.027e-6,30.05826,0.008606,2.15e-9,260.2471,0.005995147]
 };
-const PL=[["mercury","ബുധൻ","#cbd5e1",3],["venus","ശുക്രൻ","#fffbe0",5],["mars","ചൊവ്വ","#f87171",4],["jupiter","വ്യാഴം","#fde68a",5],["saturn","ശനി","#e7d3a0",4]];
+const PL=[["mercury","ബുധൻ","#cbd5e1",3],["venus","ശുക്രൻ","#fffbe0",5],["mars","ചൊവ്വ","#f87171",4],["jupiter","വ്യാഴം","#fde68a",5],["saturn","ശനി","#e7d3a0",4],["uranus","യുറാനസ്","#a5f3fc",3],["neptune","നെപ്ട്യൂൺ","#93c5fd",3]];
 function orbit(k,d){
   const el=EL[k],N=el[0]+el[1]*d,inc=el[2]+el[3]*d,w=el[4]+el[5]*d,a=el[6],e=el[7]+el[8]*d,M=rev(el[9]+el[10]*d);
   const Mr=M*D; let E=Mr+e*Math.sin(Mr)*(1+e*Math.cos(Mr));
@@ -362,6 +382,7 @@ function ephem(ms=Date.now()){
   PL.forEach(([k,n,col,rad])=>{
     const p=P[k]; let lo=Math.atan2(p.y,p.x)/D, la=Math.atan2(p.z,Math.hypot(p.x,p.y))/D;
     if(k==="jupiter") lo+=-0.332*sn(2*Mj-5*Mt-67.6)-0.056*sn(2*Mj-2*Mt+21)+0.042*sn(3*Mj-5*Mt+21)-0.036*sn(Mj-2*Mt)+0.022*cs(Mj-Mt)+0.023*sn(2*Mj-3*Mt+52)-0.016*sn(Mj-5*Mt-69);
+    if(k==="uranus"){ const Mu=P.uranus.M; lo+=0.040*sn(Mt-2*Mu+6)+0.035*sn(Mt-3*Mu+33)-0.015*sn(Mj-Mu+20); }
     if(k==="saturn"){ lo+=0.812*sn(2*Mj-5*Mt-67.6)-0.229*cs(2*Mj-4*Mt-2)+0.119*sn(Mj-2*Mt-3)+0.046*sn(2*Mj-6*Mt-69)+0.014*sn(Mj-3*Mt+32); la+=-0.02*cs(2*Mj-4*Mt-2)+0.018*sn(2*Mj-6*Mt-49); }
     out.push({key:k,ml:n,col,rad,...eq(p.r*cs(la)*cs(lo)+sun.x,p.r*cs(la)*sn(lo)+sun.y,p.r*sn(la))});
   });
@@ -429,10 +450,10 @@ function drawExtras(lst){
     b.sx=null; if(!showBodies) return;
     const p=bodyScr(b,lst); if(!p) return;
     b.sx=p.x; b.sy=p.y;
-    if(b.key==="moon") drawMoon(p.x,p.y,b.rad,b.el,moonRot(b,lst));
+    if(b.key==="moon") drawMoon(p.x,p.y,(b.R=Math.min(90,b.rad*Math.pow(75/fov,1.1))),b.el,moonRot(b,lst));
     else if(b.ring){ ctx.strokeStyle=b.col; ctx.lineWidth=1.5; ctx.setLineDash([3,3]); ctx.beginPath(); ctx.arc(p.x,p.y,b.rad,0,6.283); ctx.stroke(); ctx.setLineDash([]); }
-    else { ctx.fillStyle=b.col; ctx.beginPath(); ctx.arc(p.x,p.y,b.rad,0,6.283); ctx.fill(); }
-    ctx.fillStyle=b.col; ctx.fillText(b.ml,p.x,p.y+b.rad+13);
+    else if(!b.ring){ drawPlanet(b,p.x,p.y); } else { ctx.fillStyle=b.col; ctx.beginPath(); ctx.arc(p.x,p.y,b.rad,0,6.283); ctx.fill(); }
+    ctx.fillStyle=b.col; ctx.fillText(b.ml,p.x,p.y+(b.R||b.rad)+13);
   });
 }
 function showBodyOld(b){
@@ -453,21 +474,21 @@ function showNakInfo(n){
 
 function draw(){
   setView();
-  const lst=getLST();
+  const lst=getLST(); skyF=calcSkyF(lst);
   ctx.clearRect(0,0,W,H);
   const g=ctx.createRadialGradient(W/2,H/2,40,W/2,H/2,Math.max(W,H)*.75);
-  g.addColorStop(0,"#0b152b"); g.addColorStop(1,"#040711");
+  g.addColorStop(0,mixc("#0b152b","#6f93c8",skyF)); g.addColorStop(1,mixc("#040711","#2f5d9e",skyF));
   ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 
-  for(const s of STARS){
+  for(const s of STARS){ if(s[2]>SET.mag) continue;
     const p=toScr(s[0],s[1],lst); if(!p) continue;
     ctx.fillStyle = s[3]<.3?"#cfe0ff":s[3]<.9?"#fff7ea":"#ffd2a1";
-    ctx.globalAlpha = Math.min(1,1.15-s[2]*.15);
-    ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(.5,2.9-s[2]*.45),0,6.283); ctx.fill();
+    ctx.globalAlpha = Math.min(1,1.15-s[2]*.15)*(1-.9*skyF);
+    ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(.5,(2.9-s[2]*.45)*SET.ssize),0,6.283); ctx.fill(); starLabel(s,p);
   }
   ctx.globalAlpha=1;
 
-  ctx.strokeStyle="rgba(148,163,184,.35)"; ctx.lineWidth=1; ctx.beginPath();
+  drawGuides(lst); ctx.strokeStyle="rgba(148,163,184,.35)"; ctx.lineWidth=1; ctx.beginPath();
   let pen=false;
   for(let a=0;a<=360;a+=4){
     const p=proj(a*D,0);
@@ -498,11 +519,11 @@ function draw(){
     if(showLabels&&cs){
       ctx.fillStyle=c.zodiac?"#fde68a":"#bae6fd";
       ctx.font="600 12px 'Noto Sans Malayalam',system-ui,sans-serif";
-      ctx.textAlign="center"; ctx.fillText(c.malayalam,cs.x,cs.y-10);
+      ctx.font=`600 ${SET.lab}px 'Noto Sans Malayalam',system-ui,sans-serif`; ctx.textAlign="center"; ctx.fillText(c.malayalam,cs.x,cs.y-10);
     }
   }
 
-  drawExtras(lst);
+  drawGround(lst); drawExtras(lst); drawHUD(lst);
   ctx.font="bold 12px 'Noto Sans Malayalam',system-ui,sans-serif"; ctx.textAlign="center";
   ctx.fillStyle="rgba(56,189,248,.9)";
   [["വടക്ക് (N)",0],["കിഴക്ക് (E)",90],["തെക്ക് (S)",180],["പടിഞ്ഞാറ് (W)",270]].forEach(([t,a])=>{
@@ -570,11 +591,11 @@ window.addEventListener("pointermove",e=>{
   pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
   moved=Math.max(moved,Math.hypot(e.clientX-downX,e.clientY-downY));
   if(pts.size===2){
-    const d=pinchDist(); fov=Math.max(25,Math.min(110,fov*lastPinch/d)); lastPinch=d; needs=true; return;
+    const d=pinchDist(); fov=Math.max(6,Math.min(110,fov*lastPinch/d)); lastPinch=d; needs=true; return;
   }
   if(!dragging||compassOn) return;
-  yaw=((yaw-(e.clientX-lastX)*.22)%360+360)%360;
-  pitch=Math.max(-10,Math.min(88,pitch+(e.clientY-lastY)*.22));
+  yaw=((yaw-(e.clientX-lastX)*.22*fov/75)%360+360)%360;
+  pitch=Math.max(-10,Math.min(88,pitch+(e.clientY-lastY)*.22*fov/75));
   lastX=e.clientX; lastY=e.clientY; needs=true;
 });
 function endPtr(e){
@@ -583,7 +604,7 @@ function endPtr(e){
 }
 window.addEventListener("pointerup",endPtr);
 window.addEventListener("pointercancel",endPtr);
-canvas.addEventListener("wheel",e=>{e.preventDefault();fov=Math.max(25,Math.min(110,fov+e.deltaY*.03));needs=true},{passive:false});
+canvas.addEventListener("wheel",e=>{e.preventDefault();fov=Math.max(6,Math.min(110,fov+e.deltaY*.03*fov/75));needs=true},{passive:false});
 function tap(x,y){
   let best=null,bd=45,fn=null;
   const chk=(o,f,pen=0)=>{ if(o.sx==null) return; const d=Math.hypot(o.sx-x,o.sy-y)+pen; if(d<bd){bd=d;best=o;fn=f} };
@@ -611,8 +632,8 @@ function handleOrientation(e){
   const vx=-Math.cos(a)*Math.sin(g)-Math.sin(a)*Math.sin(b)*Math.cos(g);
   const vy=-Math.sin(a)*Math.sin(g)+Math.cos(a)*Math.sin(b)*Math.cos(g);
   const vz=-Math.cos(b)*Math.cos(g);
-  yaw=(Math.atan2(vx,vy)/D+360)%360;
-  pitch=Math.max(-10,Math.min(88,Math.asin(Math.max(-1,Math.min(1,vz)))/D));
+  const ny=(Math.atan2(vx,vy)/D+360)%360, k=1-SET.smooth; yaw=(yaw+(((ny-yaw+540)%360)-180)*k+360)%360;
+  pitch+=(Math.max(-10,Math.min(88,Math.asin(Math.max(-1,Math.min(1,vz)))/D))-pitch)*k;
   needs=true;
 }
 async function startCompass(gesture){
@@ -693,6 +714,157 @@ function goFull(){ const el=document.documentElement; try{ if(!document.fullscre
 $("toggleFullBtn").onclick=function(){ try{ if(document.fullscreenElement){ document.exitFullscreen(); localStorage.setItem("aa_full","0"); } else { goFull(); localStorage.setItem("aa_full","1"); } }catch{} };
 document.addEventListener("fullscreenchange",()=>{ $("toggleFullBtn").classList.toggle("active",!!document.fullscreenElement); needs=true; });
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+// ===== ക്രമീകരണം, ഗ്രിഡ്, ഗ്രഹ ചിത്രം =====
+$("drawerClose").onclick=()=>{ $("drawer").classList.add("hidden"); $("toggleDrawerBtn").classList.remove("active"); };
+const saveSet=()=>{ try{localStorage.setItem("aa_set",JSON.stringify(SET))}catch{} };
+let wl=null;
+async function setAwake(on){ try{ if(on&&navigator.wakeLock) wl=await navigator.wakeLock.request("screen"); else if(wl){ await wl.release(); wl=null; } }catch{} }
+document.addEventListener("visibilitychange",()=>{ if(SET.awake&&document.visibilityState==="visible") setAwake(true); });
+(function(){
+  const sp=document.createElement("div"); sp.className="pan"; sp.id="setPanel";
+  sp.innerHTML=`<h3>ക്രമീകരണം</h3>
+  <label>നക്ഷത്ര തെളിച്ച പരിധി (മാഗ്നിറ്റ്യൂഡ് ≤ <b id="vMag"></b>)<input type="range" id="sMag" min="2" max="6" step=".5"></label>
+  <label>നക്ഷത്ര വലിപ്പം<input type="range" id="sSize" min=".6" max="2" step=".1"></label>
+  <label>പേരുകളുടെ വലിപ്പം<input type="range" id="sLab" min="9" max="20" step="1"></label>
+  <label>കോമ്പസ് സ്മൂത്തിംഗ്<input type="range" id="sSm" min="0" max=".9" step=".05"></label>
+  <label><input type="checkbox" id="cGrid">RA / Dec ഗ്രിഡ്</label>
+  <label><input type="checkbox" id="cEcl">ക്രാന്തിവൃത്തം (സൂര്യപഥം)</label>
+  <label><input type="checkbox" id="cAz">ഉയരം/ദിശ ഗ്രിഡ് (Alt-Az)</label>
+  <label><input type="checkbox" id="cGround">ഭൂമി + സന്ധ്യാ വെളിച്ചം</label>
+  <label><input type="checkbox" id="cNames">നക്ഷത്ര പേരുകൾ</label>
+  <label><input type="checkbox" id="cHud">മുകളിൽ വിവരപ്പെട്ടി (Alt/Az/RA/Dec)</label>
+  <label><input type="checkbox" id="cNight">രാത്രി (ചുവപ്പ്) മോഡ്</label>
+  <label><input type="checkbox" id="cAwake">സ്ക്രീൻ ഓഫാകാതിരിക്കട്ടെ</label>`;
+  document.body.appendChild(sp);
+  const bind=(id,key,bool,fn)=>{ const el=$(id); if(bool) el.checked=SET[key]; else el.value=SET[key];
+    el.oninput=el.onchange=()=>{ SET[key]=bool?el.checked:+el.value; saveSet(); needs=true; if(fn) fn(); }; };
+  const mag=()=>$("vMag").textContent=SET.mag;
+  bind("sMag","mag",false,mag); bind("sSize","ssize"); bind("sLab","lab"); bind("sSm","smooth");
+  bind("cGrid","grid",true); bind("cEcl","ecl",true); bind("cAz","azgrid",true); bind("cGround","ground",true); bind("cNames","names",true); bind("cHud","hud",true);
+  bind("cNight","night",true,()=>document.documentElement.classList.toggle("night",SET.night));
+  bind("cAwake","awake",true,()=>setAwake(SET.awake));
+  mag(); document.documentElement.classList.toggle("night",SET.night); if(SET.awake) setAwake(true);
+  $("toggleSetBtn").onclick=function(){ sp.classList.toggle("show"); this.classList.toggle("active",sp.classList.contains("show")); };
+})();
+function drawGuides(lst){
+  const line=(pts,col)=>{ ctx.strokeStyle=col; ctx.lineWidth=1; ctx.beginPath(); let on=false;
+    for(const q of pts){ const p=toScr(q[0],q[1],lst,-5); if(!p){on=false;continue} on?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y); on=true; } ctx.stroke(); };
+  if(SET.grid){
+    for(let d=-60;d<=60;d+=30){ const a=[]; for(let h=0;h<=24;h+=.25) a.push([h,d]); line(a,"rgba(148,163,184,.2)"); }
+    for(let h=0;h<24;h+=2){ const a=[]; for(let d=-85;d<=85;d+=5) a.push([h,d]); line(a,"rgba(148,163,184,.2)"); }
+  }
+  if(SET.ecl){ const e=23.4393*D, a=[];
+    for(let l=0;l<=360;l+=3){ const r=l*D; a.push([Math.atan2(Math.cos(e)*Math.sin(r),Math.cos(r))/D/15, Math.asin(Math.sin(e)*Math.sin(r))/D]); }
+    line(a,"rgba(250,204,21,.5)"); }
+  if(SET.azgrid){
+    const pl=(pts,col)=>{ ctx.strokeStyle=col; ctx.lineWidth=1; ctx.beginPath(); let on=false;
+      for(const q of pts){ const p=proj(q[0]*D,q[1]*D); if(!p){on=false;continue} on?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y); on=true; } ctx.stroke(); };
+    for(let h=15;h<90;h+=15){ const a=[]; for(let z=0;z<=360;z+=3) a.push([z,h]); pl(a,"rgba(110,231,183,.22)"); }
+    for(let z=0;z<360;z+=30){ const a=[]; for(let h=0;h<=90;h+=5) a.push([z,h]); pl(a,"rgba(110,231,183,.22)"); }
+    ctx.fillStyle="rgba(110,231,183,.7)"; ctx.font="10px system-ui"; ctx.textAlign="center";
+    for(let h=15;h<90;h+=15){ const p=proj(yaw*D,h*D); if(p) ctx.fillText(h+"°",p.x,p.y-2); }
+  }
+}
+const PIMG={};
+function planetImg(k){ if(PIMG[k]!==undefined) return PIMG[k]; PIMG[k]=null; const im=new Image(); im.onload=()=>{PIMG[k]=im;needs=true}; im.src="planets/"+k+".png"; return null; }
+const PCOL={mercury:["#e5e7eb","#6b7280"],venus:["#fff6dc","#d6ae68"],mars:["#f7a583","#a23a18"],jupiter:["#f6e2bd","#b4864f"],saturn:["#f4e6bd","#b39a60"]};
+function drawPlanet(b,x,y){
+  const R=Math.min(70,b.rad*Math.pow(75/fov,1.1)); b.R=R;
+  const im=planetImg(b.key); if(im){ ctx.drawImage(im,x-R*1.6,y-R*1.6,R*3.2,R*3.2); return; }
+  ctx.save(); ctx.translate(x,y);
+  if(b.key==="sun"){
+    const g=ctx.createRadialGradient(0,0,R*.3,0,0,R*2.4); g.addColorStop(0,"rgba(255,220,120,.9)"); g.addColorStop(1,"rgba(255,200,80,0)");
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,R*2.4,0,6.283); ctx.fill();
+    ctx.fillStyle="#fde68a"; ctx.beginPath(); ctx.arc(0,0,R,0,6.283); ctx.fill(); ctx.restore(); return;
+  }
+  const c=PCOL[b.key]||[b.col,b.col], sat=b.key==="saturn";
+  if(sat){ ctx.rotate(-.35); ctx.strokeStyle="rgba(225,205,150,.75)"; ctx.lineWidth=Math.max(1.5,R*.3);
+    ctx.beginPath(); ctx.ellipse(0,0,R*1.9,R*.55,0,Math.PI,2*Math.PI); ctx.stroke(); }
+  const g=ctx.createRadialGradient(-R*.35,-R*.35,R*.1,0,0,R); g.addColorStop(0,c[0]); g.addColorStop(1,c[1]);
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,R,0,6.283); ctx.fill();
+  if(b.key==="jupiter"&&R>6){ ctx.save(); ctx.beginPath(); ctx.arc(0,0,R,0,6.283); ctx.clip(); ctx.fillStyle="rgba(120,70,30,.35)";
+    [-.55,-.2,.15,.5].forEach(f=>ctx.fillRect(-R,f*R-R*.07,2*R,R*.16)); ctx.restore(); }
+  if(sat){ ctx.strokeStyle="rgba(225,205,150,.75)"; ctx.lineWidth=Math.max(1.5,R*.3);
+    ctx.beginPath(); ctx.ellipse(0,0,R*1.9,R*.55,0,0,Math.PI); ctx.stroke(); }
+  ctx.restore();
+}
+// ===== AASTRORIYAM smart UI: റെയിൽ, തിരയൽ, സമയം, HUD, ഭൂമി =====
+let skyF=0;
+const mixc=(a,b,t)=>{ const q=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)), A=q(a), B=q(b); return `rgb(${A.map((v,i)=>Math.round(v+(B[i]-v)*t)).join(",")})`; };
+function calcSkyF(lst){ const s=bodies.find(b=>b.key==="sun"); if(!s) return 0; const t=Math.max(0,Math.min(1,(horiz(s.ra,s.dec,lst)[1]/D+16)/16)); return t*t*(3-2*t); }
+const SNAME={"6.752,-16.72":"വ്യാധൻ (സിറിയസ്)","6.399,-52.7":"അഗസ്ത്യൻ","18.616,38.78":"അഭിജിത്ത്","5.278,46":"ബ്രഹ്മഹൃദയം","5.242,-8.2":"Rigel","7.655,5.22":"Procyon","1.629,-57.24":"Achernar","22.961,-29.62":"Fomalhaut","20.691,45.28":"Deneb","2.53,89.26":"ധ്രുവൻ","12.443,-63.1":"Acrux","14.064,-60.37":"Hadar"};
+function starLabel(s,p){
+  const nm=SNAME[s[0]+","+s[1]]; if(!nm||!showLabels||!SET.names||skyF>.6) return;
+  ctx.font="11px 'Noto Sans Malayalam',system-ui,sans-serif"; ctx.fillStyle="rgba(226,232,240,.85)"; ctx.textAlign="left"; ctx.fillText(nm,p.x+6,p.y-6); ctx.textAlign="center";
+}
+function drawGround(lst){
+  if(!SET.ground) return;
+  const pts=[]; for(let a=yaw-110;a<=yaw+110;a+=2){ const p=proj((((a%360)+360)%360)*D,0); if(p) pts.push(p); }
+  if(pts.length<2) return;
+  pts.sort((a,b)=>a.x-b.x);
+  let hy=1e9; pts.forEach(p=>{ if(p.x>-50&&p.x<W+50) hy=Math.min(hy,p.y); });
+  if(hy===1e9) hy=pts[0].y;
+  const gl=ctx.createLinearGradient(0,hy-110,0,hy); gl.addColorStop(0,"rgba(120,150,210,0)"); gl.addColorStop(1,`rgba(120,150,210,${.16+.3*skyF})`);
+  ctx.fillStyle=gl; ctx.fillRect(0,hy-110,W,110);
+  ctx.beginPath(); ctx.moveTo(pts[0].x-200,H+300); pts.forEach(p=>ctx.lineTo(p.x,p.y)); ctx.lineTo(pts[pts.length-1].x+200,H+300); ctx.closePath();
+  const gg=ctx.createLinearGradient(0,hy,0,H); gg.addColorStop(0,"rgba(34,48,36,.94)"); gg.addColorStop(1,"rgba(12,18,14,.98)");
+  ctx.fillStyle=gg; ctx.fill();
+}
+const DN=["വടക്ക്","വടക്ക്-കിഴക്ക്","കിഴക്ക്","തെക്ക്-കിഴക്ക്","തെക്ക്","തെക്ക്-പടിഞ്ഞാറ്","പടിഞ്ഞാറ്","വടക്ക്-പടിഞ്ഞാറ്"];
+function drawHUD(lst){
+  const el=$("hud"); if(!SET.hud){ el.style.display="none"; return; }
+  const a=yaw*D, h=pitch*D, dec=Math.asin(Math.sin(h)*sinLat+Math.cos(h)*cosLat*Math.cos(a));
+  const ha=Math.atan2(-Math.sin(a)*Math.cos(h), Math.sin(h)*cosLat-Math.cos(h)*sinLat*Math.cos(a));
+  const ra=(((lst-ha/D/15)%24)+24)%24, rh=Math.floor(ra), rm=Math.round((ra-rh)*60);
+  const off=TOFF?`<div><b>⏱</b> ${TOFF>0?"+":"−"}${Math.abs(Math.round(TOFF/36e5*10)/10)} മണിക്കൂർ</div>`:"";
+  el.style.display="block";
+  el.innerHTML=`<div><b>ഉയരം</b> ${pitch.toFixed(1)}°</div><div><b>ദിശ</b> ${yaw.toFixed(0)}° ${DN[Math.round(yaw/45)%8]}</div><div><b>RA</b> ${rh}h ${rm}m</div><div><b>Dec</b> ${(dec/D).toFixed(1)}°</div><div><b>FOV</b> ${fov.toFixed(0)}°</div>${off}`;
+}
+function goTo(ra,dec,j2000){
+  if(compassWanted) stopCompass();
+  if(j2000) [ra,dec]=precess(ra,dec);
+  const [az,alt]=horiz(ra,dec,getLST()); yaw=az/D; pitch=Math.max(-10,Math.min(88,alt/D)); needs=true;
+}
+function findObjs(q){
+  q=q.trim().toLowerCase(); if(!q) return []; const r=[];
+  cons.forEach(c=>{ if((c.malayalam+" "+c.english+" "+c.abbr).toLowerCase().includes(q)) r.push({n:c.malayalam,go:()=>{ if(!c.checked){c.checked=true;renderChecklist();} goTo(c.ra,c.dec,true); showInfo(c); }}); });
+  bodies.forEach(b=>{ if((b.ml+" "+b.key).toLowerCase().includes(q)) r.push({n:b.ml,go:()=>{ goTo(b.ra,b.dec,false); showBody(b); }}); });
+  NAK.forEach(n=>{ if((n[0]+" "+n[1]).toLowerCase().includes(q)) r.push({n:n[0]+" (നക്ഷത്രം)",go:()=>{ goTo(n[2],n[3],true); showNakInfo(n); }}); });
+  return r.slice(0,8);
+}
+const toast=t=>{ const e=$("toast"); e.textContent=t; e.style.opacity=1; clearTimeout(toast.t); toast.t=setTimeout(()=>e.style.opacity=0,1500); };
+const toLocal=ms=>new Date(ms-new Date(ms).getTimezoneOffset()*6e4).toISOString().slice(0,16);
+(function(){
+  const tb=$("toolbar");
+  [["toggleGroundBtn","ഭൂമി"],["toggleGridBtn","ഗ്രിഡ്"],["timeBtn","സമയം"],["searchBtn","തിരയുക"]].forEach(([id,t])=>{ const b=document.createElement("button"); b.id=id; b.textContent=t; tb.insertBefore(b,tb.firstChild); });
+  const IC={searchBtn:"🔍",timeBtn:"🕐",toggleGridBtn:"▦",toggleGroundBtn:"🌄",toggleLinesBtn:"✦",toggleArtBtn:"🖼",toggleLabelsBtn:"Aa",toggleBodiesBtn:"🪐",toggleNakBtn:"✺",gpsBtn:"📍",compassBtn:"🧭",resetViewBtn:"🎯",toggleFullBtn:"⛶",toggleCsvBtn:"📄",togglePanBtn:"📅",toggleDrawerBtn:"☰",toggleSetBtn:"⚙"};
+  const ST=["toggleLinesBtn","toggleArtBtn","toggleLabelsBtn","toggleBodiesBtn","toggleNakBtn","toggleGridBtn","toggleGroundBtn","compassBtn","toggleFullBtn"];
+  tb.querySelectorAll("button").forEach(b=>{ b.title=b.textContent.trim(); if(IC[b.id]) b.textContent=IC[b.id]; });
+  tb.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; setTimeout(()=>toast(b.title+(ST.includes(b.id)?(b.classList.contains("active")?" : ഓൺ":" : ഓഫ്"):"")),40); });
+  $("menuBtn").textContent="✕";
+  const sync=()=>{ $("toggleGridBtn").classList.toggle("active",!!SET.grid); $("toggleGroundBtn").classList.toggle("active",!!SET.ground); };
+  sync();
+  $("toggleGridBtn").onclick=()=>{ SET.grid=!SET.grid; SET.azgrid=SET.grid; saveSet(); sync(); $("cGrid").checked=SET.grid; $("cAz").checked=SET.azgrid; needs=true; };
+  $("toggleGroundBtn").onclick=()=>{ SET.ground=!SET.ground; saveSet(); sync(); $("cGround").checked=SET.ground; needs=true; };
+  const PANS=["setPanel","searchPanel","timePanel"];
+  const only=id=>{ PANS.forEach(x=>{ const p=$(x); if(p&&x!==id) p.classList.remove("show"); }); const p=$(id); p.classList.toggle("show"); return p.classList.contains("show"); };
+  const sp=document.createElement("div"); sp.className="pan"; sp.id="searchPanel";
+  sp.innerHTML=`<h3>തിരയുക</h3><input id="qIn" placeholder="രാശി / ഗ്രഹം / നക്ഷത്രം..." style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(2,6,23,.85);color:var(--text);font-size:13px"><div id="qRes" style="margin-top:6px;display:flex;flex-direction:column;gap:4px"></div>`;
+  document.body.appendChild(sp);
+  $("qIn").addEventListener("input",()=>{ const r=findObjs($("qIn").value), box=$("qRes"); box.innerHTML="";
+    r.forEach(o=>{ const b=document.createElement("button"); b.textContent=o.n; b.style.textAlign="left"; b.onclick=()=>{ o.go(); sp.classList.remove("show"); }; box.appendChild(b); }); });
+  $("searchBtn").onclick=function(){ const on=only("searchPanel"); this.classList.toggle("active",on); if(on) $("qIn").focus(); };
+  const tp=document.createElement("div"); tp.className="pan"; tp.id="timePanel";
+  tp.innerHTML=`<h3>സമയം മാറ്റുക</h3><input type="datetime-local" id="tIn" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:rgba(2,6,23,.85);color:var(--text);font-size:13px"><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px"><button data-d="-86400000">−1 ദിവസം</button><button data-d="-3600000">−1 മണിക്കൂർ</button><button data-d="0">ഇപ്പോൾ</button><button data-d="3600000">+1 മണിക്കൂർ</button><button data-d="86400000">+1 ദിവസം</button></div><div class="note" style="margin-top:6px;color:var(--muted)">ആകാശം, ഗ്രഹങ്ങൾ, പഞ്ചാംഗം എല്ലാം ആ സമയത്തേതാകും.</div>`;
+  document.body.appendChild(tp);
+  const upd=()=>{ $("tIn").value=toLocal(Date.now()); needs=true; };
+  tp.querySelectorAll("button[data-d]").forEach(b=>b.onclick=()=>{ const d=+b.dataset.d; TOFF=d===0?0:TOFF+d; upd(); });
+  $("tIn").onchange=()=>{ const t=new Date($("tIn").value).getTime(); if(!isNaN(t)){ TOFF=t-_rn(); needs=true; } };
+  $("timeBtn").onclick=function(){ const on=only("timePanel"); this.classList.toggle("active",on); if(on) upd(); };
+  const sb=$("toggleSetBtn"), oc=sb.onclick; sb.onclick=function(){ PANS.forEach(x=>{ if(x!=="setPanel"&&$(x)) $(x).classList.remove("show"); }); oc.call(this); };
+  setTimeout(()=>{ const s=$("statusText"); if(s) s.style.display="none"; },7000);
+  window.addEventListener("pointerup",function g(){ window.removeEventListener("pointerup",g); if(typeof FULLPREF==="function"&&FULLPREF()) goFull(); });
+})();
 </script>
 </body>
 </html>
