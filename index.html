@@ -152,7 +152,7 @@ const ML = "AND:ആൻഡ്രോമിഡ;ANT:ആന്റ്ലിയ;APS:ആ
 const ZODIAC = new Set(["AQR","ARI","CNC","CAP","GEM","LEO","LIB","PSC","SGR","SCO","TAU","VIR"]);
 const KEY = new Set(["ARI","TAU","GEM","CNC","LEO","VIR","LIB","SCO","SGR","CAP","AQR","PSC","ORI","UMA","UMI","CAS","CMA","CRU","CYG","LYR","PER","PEG","AND","AQL","CRV"]);
 
-const SET=Object.assign({mag:5,ssize:1,lab:12,grid:false,ecl:false,night:false,awake:false,smooth:.3,ground:true,hud:true,azgrid:false,names:true},(()=>{try{return JSON.parse(localStorage.getItem("aa_set"))||{}}catch{return {}}})());
+const SET=Object.assign({mag:5,ssize:1,lab:12,grid:false,ecl:false,night:false,awake:false,smooth:.3,ground:true,hud:true,azgrid:false,names:true,artA:.5},(()=>{try{return JSON.parse(localStorage.getItem("aa_set"))||{}}catch{return {}}})());
 const cons = Object.keys(CON).map(k => ({
   abbr:k, english:CON[k].en, malayalam:ML[k]||CON[k].en, zodiac:ZODIAC.has(k),
   nak:"", stars:"", artUrl:"", img:null, lines:CON[k].l, ra:CON[k].c[0], dec:CON[k].c[1],
@@ -446,7 +446,7 @@ function drawArt(c,lst){
     for(const a of an.slice(0,3)){ const p=toScr(a[2],a[3],lst,-90); if(!p) return; src.push([a[0]*iw,a[1]*ih]); dst.push([p.x,p.y]); }
     T=affine(src,dst);
   }
-  ctx.save(); ctx.globalAlpha=.34;
+  ctx.save(); ctx.globalCompositeOperation=im._screen?"screen":"source-over"; ctx.globalAlpha=SET.artA;
   if(T){ ctx.transform(...T); ctx.drawImage(im,0,0); }
   else{   // ആങ്കർ ഇല്ലെങ്കിൽ: കോൺസ്റ്റലേഷന്റെ വരകൾക്ക് ചുറ്റും ഏകദേശം ഫിറ്റ്
     let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
@@ -697,7 +697,7 @@ function parseCSV(t){
 function loadArt(c){
   if(!c.artUrl){c.img=null;return}
   const im=new Image();
-  im.onload=()=>{c.img=im;needs=true}; im.src=c.artUrl;
+  im.onload=()=>{im._screen=opaqueCorner(im);c.img=im;needs=true}; im.src=c.artUrl;
 }
 async function loadFromCSV(url){
   const st=$("statusText");
@@ -752,6 +752,7 @@ document.addEventListener("visibilitychange",()=>{ if(SET.awake&&document.visibi
   <label>നക്ഷത്ര വലിപ്പം<input type="range" id="sSize" min=".6" max="2" step=".1"></label>
   <label>പേരുകളുടെ വലിപ്പം<input type="range" id="sLab" min="9" max="20" step="1"></label>
   <label>കോമ്പസ് സ്മൂത്തിംഗ്<input type="range" id="sSm" min="0" max=".9" step=".05"></label>
+  <label>ചിത്രങ്ങളുടെ തെളിച്ചം<input type="range" id="sArt" min=".1" max="1" step=".05"></label>
   <label><input type="checkbox" id="cGrid">RA / Dec ഗ്രിഡ്</label>
   <label><input type="checkbox" id="cEcl">ക്രാന്തിവൃത്തം (സൂര്യപഥം)</label>
   <label><input type="checkbox" id="cAz">ഉയരം/ദിശ ഗ്രിഡ് (Alt-Az)</label>
@@ -764,7 +765,7 @@ document.addEventListener("visibilitychange",()=>{ if(SET.awake&&document.visibi
   const bind=(id,key,bool,fn)=>{ const el=$(id); if(bool) el.checked=SET[key]; else el.value=SET[key];
     el.oninput=el.onchange=()=>{ SET[key]=bool?el.checked:+el.value; saveSet(); needs=true; if(fn) fn(); }; };
   const mag=()=>$("vMag").textContent=SET.mag;
-  bind("sMag","mag",false,mag); bind("sSize","ssize"); bind("sLab","lab"); bind("sSm","smooth");
+  bind("sMag","mag",false,mag); bind("sSize","ssize"); bind("sLab","lab"); bind("sSm","smooth"); bind("sArt","artA");
   bind("cGrid","grid",true); bind("cEcl","ecl",true); bind("cAz","azgrid",true); bind("cGround","ground",true); bind("cNames","names",true); bind("cHud","hud",true);
   bind("cNight","night",true,()=>document.documentElement.classList.toggle("night",SET.night));
   bind("cAwake","awake",true,()=>setAwake(SET.awake));
@@ -791,11 +792,12 @@ function drawGuides(lst){
   }
 }
 const PIMG={};
-function planetImg(k){ if(PIMG[k]!==undefined) return PIMG[k]; PIMG[k]=null; const im=new Image(); im.onload=()=>{PIMG[k]=im;needs=true}; im.src="planets/"+k+".png"; return null; }
+function opaqueCorner(im){ try{ const c=document.createElement("canvas"); c.width=c.height=2; const g=c.getContext("2d"); g.drawImage(im,0,0,2,2); return g.getImageData(0,0,1,1).data[3]>250; }catch{ return true; } }
+function planetImg(k){ if(PIMG[k]!==undefined) return PIMG[k]; PIMG[k]=null; const im=new Image(); im.onload=()=>{im._screen=opaqueCorner(im);PIMG[k]=im;needs=true}; im.src="planets/"+k+".png"; return null; }
 const PCOL={mercury:["#e5e7eb","#6b7280"],venus:["#fff6dc","#d6ae68"],mars:["#f7a583","#a23a18"],jupiter:["#f6e2bd","#b4864f"],saturn:["#f4e6bd","#b39a60"]};
 function drawPlanet(b,x,y){
   const R=Math.min(70,b.rad*Math.pow(75/fov,1.1)); b.R=R;
-  const im=planetImg(b.key); if(im){ ctx.drawImage(im,x-R*1.6,y-R*1.6,R*3.2,R*3.2); return; }
+  const im=showArt?planetImg(b.key):null; if(im){ ctx.save(); ctx.globalCompositeOperation=im._screen?"screen":"source-over"; ctx.drawImage(im,x-R*1.6,y-R*1.6,R*3.2,R*3.2); ctx.restore(); return; }
   ctx.save(); ctx.translate(x,y);
   if(b.key==="sun"){
     const g=ctx.createRadialGradient(0,0,R*.3,0,0,R*2.4); g.addColorStop(0,"rgba(255,220,120,.9)"); g.addColorStop(1,"rgba(255,200,80,0)");
@@ -1011,6 +1013,10 @@ showNakInfo=function(n){
 };
 showInfo=function(c){ _si3(c); placeCard(); };
 showBody=function(b){ _sb3(b); placeCard(); };
+fetch("art/art.json").then(r=>r.ok?r.json():null).then(j=>{
+  if(!j) return;
+  cons.forEach(c=>{ const e=j[c.abbr]; if(!e||c.artUrl) return; c.artUrl=e.file; c.anchors=e.anchors||null; loadArt(c); });
+}).catch(()=>{});
 </script>
 </body>
 </html>
