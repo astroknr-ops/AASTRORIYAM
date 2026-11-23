@@ -115,7 +115,7 @@ button,input,select,textarea{font-family:inherit}
 <div class="info-card" id="infoCard">
   <div style="display:flex;justify-content:space-between;align-items:center"><h3 id="infoTitle"></h3><button id="closeInfoBtn" style="padding:2px 7px;font-size:11px">✕</button></div>
   <div class="info-row" id="infoSub"></div><div class="info-row" id="infoNak"></div>
-  <div class="info-row" id="infoStars"></div><div class="info-row" id="infoCoords"></div>
+  <div class="info-row" id="infoStars"></div><div class="info-row" id="infoCoords"></div><div class="info-row" id="infoStory"></div>
 </div>
 <div class="infopanel hide" id="infoPanel"><iframe id="infoFrame" title="കൂടുതൽ വിവരങ്ങൾ"></iframe></div>
 <div id="toast"></div>
@@ -333,7 +333,7 @@ window.addEventListener("message",e=>{
 });
 function showBody(b){
   const m=b.key==="moon", rs=riseSet(dayStartMs())[b.key], sd=b.ring?rev(b.lon-b.ayan):0;
-  $("infoTitle").textContent=b.ml;
+  $("infoTitle").textContent=bodyLabel(b);
   $("infoSub").innerHTML=m?`<b>ഘട്ടം:</b> ${b.phase} • ${Math.round(b.lit*100)}% പ്രകാശം`:b.ring?"ഛായാഗ്രഹം (മീൻ നോഡ്)":"";
   $("infoNak").innerHTML=m?`<b>ഇന്നത്തെ നക്ഷത്രം:</b> ${NAK[b.nak][0]} • <b>തിഥി:</b> ${tithiName(b.el)}`:b.ring?`<b>രാശി:</b> ${RASI[Math.floor(sd/30)]} ${(sd%30).toFixed(1)}° (നിരയനം)`:"";
   $("infoStars").innerHTML=rs?`<b>ഉദയം:</b> ${fmt(rs.rise)} • <b>അസ്തമയം:</b> ${fmt(rs.set)}`:"";
@@ -462,7 +462,7 @@ function drawExtras(lst){
       n.sx=null; const p=toScr(n[2],n[3],lst); if(!p) return;
       n.sx=p.x; n.sy=p.y;
       ctx.strokeStyle="rgba(251,191,36,.9)"; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(p.x,p.y,8,0,6.283); ctx.stroke();
-      ctx.fillStyle="#fde68a"; ctx.fillText(n[0],p.x,p.y+22);
+      ctx.fillStyle="#fde68a"; ctx.fillText(nkLabel(n),p.x,p.y+22);
     });
   }
   bodies=ephem();
@@ -475,7 +475,7 @@ function drawExtras(lst){
     if(b.key==="moon") drawMoon(p.x,p.y,(b.R=Math.min(90,b.rad*Math.pow(75/fov,1.1))),b.el,moonRot(b,lst));
     else if(b.ring){ ctx.strokeStyle=b.col; ctx.lineWidth=1.5; ctx.setLineDash([3,3]); ctx.beginPath(); ctx.arc(p.x,p.y,b.rad,0,6.283); ctx.stroke(); ctx.setLineDash([]); }
     else if(!b.ring){ drawPlanet(b,p.x,p.y); } else { ctx.fillStyle=b.col; ctx.beginPath(); ctx.arc(p.x,p.y,b.rad,0,6.283); ctx.fill(); }
-    ctx.fillStyle=b.col; ctx.fillText(b.ml,p.x,p.y+(b.R||b.rad)+13);
+    ctx.fillStyle=b.col; ctx.fillText(bodyLabel(b),p.x,p.y+(b.R||b.rad)+13);
   });
 }
 function showBodyOld(b){
@@ -488,7 +488,7 @@ function showBodyOld(b){
   $("infoCard").classList.add("show");
 }
 function showNakInfo(n){
-  $("infoTitle").textContent=`${n[0]} (നക്ഷത്രം)`;
+  $("infoTitle").textContent=`${nkLabel(n)} • നക്ഷത്രം`;
   $("infoSub").innerHTML=`<b>യോഗതാര:</b> ${n[1]}`; $("infoNak").innerHTML=""; $("infoStars").innerHTML="";
   $("infoCoords").innerHTML=`<b>RA / Dec:</b> ${n[2].toFixed(2)}h, ${n[3].toFixed(1)}°`;
   $("infoCard").classList.add("show");
@@ -707,12 +707,14 @@ async function loadFromCSV(url){
     cons.forEach(c=>{
       const r=map.get(c.abbr); if(!r) return;
       if(r[3]&&r[3].trim()) c.malayalam=r[3].trim();
+      if(r[2]&&r[2].trim()) c.english=r[2].trim();
+      c.story=(r[11]||"").trim(); c.storyTitle=(r[12]||"").trim();
       if(r[4]) c.zodiac=/zodiac/i.test(r[4]);
       c.nak=(r[5]||"").trim(); c.stars=(r[6]||"").trim();
-      const art=(r[7]||"").trim(); if(art!==c.artUrl){c.artUrl=art;loadArt(c)}
-      try{const an=(r[10]||"").trim(); c.anchors=an?JSON.parse(an):null}catch{c.anchors=null}
+      const art=(r[7]||"").trim(); if(art&&art!==c.artUrl){c.artUrl=art;loadArt(c)}
+      try{const an=(r[10]||"").trim(); if(an) c.anchors=JSON.parse(an)}catch{}
     });
-    normNames(); try{localStorage.setItem("nl_csv",url)}catch{}
+    buildExtras(rows); normNames(); try{localStorage.setItem("nl_csv",url)}catch{}
     renderChecklist(); needs=true;
     st.textContent=`CSV അപ്‌ഡേറ്റ് ആയി (${rows.length} വരികൾ)`;
   }catch{ st.textContent="CSV വായിക്കാൻ കഴിഞ്ഞില്ല (ബിൽറ്റ്-ഇൻ ഡാറ്റ ഉപയോഗിക്കുന്നു)"; }
@@ -850,7 +852,7 @@ function goTo(ra,dec,j2000){
 function findObjs(q){
   q=q.trim().toLowerCase(); if(!q) return []; const r=[];
   cons.forEach(c=>{ if((c.malayalam+" "+(c.alias||"")+" "+c.english+" "+c.abbr).toLowerCase().includes(q)) r.push({n:c.label,go:()=>{ if(!c.checked){c.checked=true;renderChecklist();} goTo(c.ra,c.dec,true); showInfo(c); }}); });
-  bodies.forEach(b=>{ if((b.ml+" "+b.key).toLowerCase().includes(q)) r.push({n:b.ml,go:()=>{ goTo(b.ra,b.dec,false); showBody(b); }}); });
+  bodies.forEach(b=>{ if((b.ml+" "+b.key).toLowerCase().includes(q)) r.push({n:bodyLabel(b),go:()=>{ goTo(b.ra,b.dec,false); showBody(b); }}); });
   NAK.forEach(n=>{ if((n[0]+" "+n[1]).toLowerCase().includes(q)) r.push({n:n[0]+" (നക്ഷത്രം)",go:()=>{ goTo(n[2],n[3],true); showNakInfo(n); }}); });
   return r.slice(0,8);
 }
@@ -914,6 +916,55 @@ if(document.fonts&&document.fonts.load){
   Promise.all([document.fonts.load("600 12px 'Noto Sans Malayalam'","ക്ക സ്റ്റ കുംഭം"),document.fonts.load("400 12px 'Noto Sans Malayalam'","ക്ക സ്റ്റ")]).then(()=>{ needs=true; }).catch(()=>{});
   document.fonts.ready.then(()=>{ needs=true; });
 }
+// ===== ഷീറ്റിൽ നിന്നുള്ള പേരുകൾ (മലയാളം + English), കഥ / വിശദീകരണം =====
+const BEN={sun:"Sun",moon:"Moon",mercury:"Mercury",venus:"Venus",mars:"Mars",jupiter:"Jupiter",saturn:"Saturn",uranus:"Uranus",neptune:"Neptune",rahu:"Rahu",ketu:"Ketu"};
+const bodyLabel=b=>(SET.en!==false&&BEN[b.key])?`${b.ml} (${BEN[b.key]})`:b.ml;
+const nkLabel=n=>{ const e=(n[1]||"").replace(/\s*\(.*\)\s*$/,"").trim(); return (SET.en!==false&&e)?`${n[0]} (${e})`:n[0]; };
+const escS=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let EXTRA={};
+function buildExtras(rows){
+  EXTRA={};
+  rows.forEach(r=>{ const v=(r[11]||"").trim(); if(!v) return; const s={story:v,title:(r[12]||"").trim()};
+    [(r[1]||"").trim().toUpperCase(),(r[3]||"").trim()].forEach(k=>{ if(k) EXTRA[k]=s; }); });
+}
+const storyFor=keys=>{ for(const k of keys){ if(!k) continue; const s=EXTRA[String(k).toUpperCase()]||EXTRA[k]; if(s) return s; } return null; };
+function setStoryBtn(s){
+  const el=$("infoStory"); if(!el) return;
+  if(!s){ el.innerHTML=""; return; }
+  el.innerHTML=`<button id="storyBtn" class="gold" style="margin-top:6px">📖 ${escS(s.title||"കഥ / വിശദീകരണം വായിക്കാം")}</button>`;
+  $("storyBtn").onclick=()=>openStory(s);
+}
+const _si=showInfo, _sb=showBody, _sn=showNakInfo;
+showInfo=function(c){ _si(c); setStoryBtn(c.story?{story:c.story,title:c.storyTitle}:storyFor([c.abbr,c.malayalam,c.english])); };
+showBody=function(b){ _sb(b); setStoryBtn(storyFor([b.key,b.ml])); };
+showNakInfo=function(n){ _sn(n); setStoryBtn(storyFor([n[0]])); };
+function fmtStory(t){
+  return escS(t).split(/\n{2,}/).map(p=>{ const im=p.trim().match(/^(https?:\/\/\S+\.(?:png|jpe?g|webp|gif))$/i);
+    return im?`<img src="${im[1]}" style="max-width:100%;border-radius:8px;margin:6px 0">`:`<p>${p.replace(/\n/g,"<br>")}</p>`; }).join("");
+}
+async function openStory(s){
+  $("storyTitle").textContent=s.title||"കഥ / വിശദീകരണം"; $("storyPanel").style.display="flex";
+  const box=$("storyBody"), v=(s.story||"").trim(); box.scrollTop=0; box.innerHTML="<p>ലോഡ് ചെയ്യുന്നു...</p>";
+  let m;
+  if((m=v.match(/docs\.google\.com\/document\/d\/([\w-]+)/))||(m=v.match(/^([\w-]{25,})$/))){
+    box.innerHTML=`<iframe class="stf" src="https://docs.google.com/document/d/${m[1]}/pub?embedded=true"></iframe><p><a href="https://docs.google.com/document/d/${m[1]}/pub" target="_blank" rel="noopener">പുതിയ ടാബിൽ തുറക്കുക</a></p>`;
+  } else if(/\.html?$/i.test(v)){ box.innerHTML=`<iframe class="stf" src="${escS(v)}"></iframe>`; }
+  else if(/\.(md|txt)$/i.test(v)){ try{ box.innerHTML=fmtStory(await (await fetch(v)).text()); }catch{ box.innerHTML="<p>ഫയൽ തുറക്കാൻ കഴിഞ്ഞില്ല.</p>"; } }
+  else box.innerHTML=fmtStory(v);
+}
+(function(){
+  const st=document.createElement("style");
+  st.textContent="#storyPanel{position:fixed;left:8px;right:8px;bottom:8px;top:16%;z-index:45;display:none;flex-direction:column;background:rgba(11,18,36,.97);border:1px solid var(--border);border-radius:14px;backdrop-filter:blur(10px)}#storyHead{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-weight:700;color:var(--accent2)}#storyBody{flex:1;overflow-y:auto;padding:10px 14px;font-size:14px;line-height:1.8;color:#e2e8f0}#storyBody p{margin:0 0 .8em}iframe.stf{width:100%;height:60vh;border:1px solid var(--border);border-radius:8px;background:#fff}";
+  document.head.appendChild(st);
+  const sp=document.createElement("div"); sp.id="storyPanel";
+  sp.innerHTML='<div id="storyHead"><span id="storyTitle"></span><button id="storyClose" style="padding:2px 9px">✕</button></div><div id="storyBody"></div>';
+  document.body.appendChild(sp);
+  $("storyClose").onclick=()=>{ sp.style.display="none"; $("storyBody").innerHTML=""; };
+  const setp=$("setPanel");
+  if(setp){ const l=document.createElement("label"); l.innerHTML='<input type="checkbox" id="cEn">പേരുകളിൽ ഇംഗ്ലീഷ് (ബ്രാക്കറ്റിൽ)'; setp.appendChild(l);
+    const el=$("cEn"); el.checked=SET.en!==false; el.onchange=()=>{ SET.en=el.checked; if(typeof saveSet==="function") saveSet(); needs=true; }; }
+})();
+fetch("art.json").then(r=>r.json()).then(j=>{ cons.forEach(c=>{ const a=j[c.abbr]; if(!a||c.artUrl) return; c.anchors=a.anchors; c.artUrl="art/"+a.file; loadArt(c); }); needs=true; }).catch(()=>{});
 </script>
 </body>
 </html>
