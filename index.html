@@ -965,6 +965,21 @@ async function openStory(s){
     const el=$("cEn"); el.checked=SET.en!==false; el.onchange=()=>{ SET.en=el.checked; if(typeof saveSet==="function") saveSet(); needs=true; }; }
 })();
 fetch("art.json").then(r=>r.json()).then(j=>{ cons.forEach(c=>{ const a=j[c.abbr]; if(!a||c.artUrl) return; c.anchors=a.anchors; c.artUrl="art/"+a.file; loadArt(c); }); needs=true; }).catch(()=>{});
+// ===== നക്ഷത്രം / ഗ്രഹം വിവര കാർഡിൽ ചിത്രം =====
+buildExtras=function(rows){
+  EXTRA={};
+  rows.forEach(r=>{ const v=(r[11]||"").trim(), im=(r[7]||"").trim(); if(!v&&!im) return;
+    const s={story:v,title:(r[12]||"").trim(),img:im};
+    [(r[1]||"").trim().toUpperCase(),(r[3]||"").trim()].forEach(k=>{ if(k) EXTRA[k]=s; }); });
+};
+function addCardImg(src){
+  const el=$("infoStory"); if(!el||!src) return;
+  el.insertAdjacentHTML("afterbegin",`<img src="${escS(src)}" alt="" onerror="this.style.display='none'" style="display:block;width:100%;max-width:240px;border-radius:12px;margin:6px 0">`);
+}
+const nkNo=n=>String(NAK.indexOf(n)+1).padStart(2,"0");
+const _sn2=showNakInfo, _sb2=showBody;
+showNakInfo=function(n){ _sn2(n); const e=EXTRA[n[0]]; addCardImg((e&&e.img)||`nak/${nkNo(n)}.png`); };
+showBody=function(b){ _sb2(b); if(b.key==="moon"||b.ring) return; const e=EXTRA[b.key.toUpperCase()]||EXTRA[b.ml]; addCardImg((e&&e.img)||`planets/${b.key}.png`); };
 </script>
 </body>
 </html>
