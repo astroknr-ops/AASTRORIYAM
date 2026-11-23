@@ -91,6 +91,7 @@ html.night{filter:sepia(1) saturate(4) hue-rotate(-40deg) brightness(.8)}
 .footer #hud div{display:inline-block;margin-right:10px}
 button,input,select,textarea{font-family:inherit}
 .footer .tag{font-size:11px;color:var(--text);margin-top:1px}
+.info-card{left:66px;max-width:min(360px,calc(100vw - 80px));max-height:48vh;overflow-y:auto}
 </style>
 </head>
 <body>
@@ -980,6 +981,36 @@ const nkNo=n=>String(NAK.indexOf(n)+1).padStart(2,"0");
 const _sn2=showNakInfo, _sb2=showBody;
 showNakInfo=function(n){ _sn2(n); const e=EXTRA[n[0]]; addCardImg((e&&e.img)||`nak/${nkNo(n)}.png`); };
 showBody=function(b){ _sb2(b); if(b.key==="moon"||b.ring) return; const e=EXTRA[b.key.toUpperCase()]||EXTRA[b.ml]; addCardImg((e&&e.img)||`planets/${b.key}.png`); };
+// ===== നക്ഷത്ര കാർഡ്: രാശി, ക്രമം, ഇപ്പോഴത്തെ ഉയരം, ഉദയാസ്തമയം; കാർഡ് ഫൂട്ടറിന് മുകളിൽ =====
+const placeCard=()=>{ const f=$("footer"); $("infoCard").style.bottom=((f?f.offsetHeight:50)+18)+"px"; };
+const fmtDM=x=>{ const d=Math.floor(x), m=Math.round((x-d)*60); return m===60?`${d+1}°00′`:`${d}°${String(m).padStart(2,"0")}′`; };
+function starRS(ra,dec){
+  const [r2,d2]=precess(ra,dec), d0=dayStartMs(), out={rise:null,set:null}, step=6e5; let prev=null;
+  for(let i=0;i<=144;i++){ const t=d0+i*step, v=horiz(r2,d2,getLST(t))[1]/D+0.5667;
+    if(prev!==null){ const f=prev/(prev-v);
+      if(prev<0&&v>=0&&!out.rise) out.rise=t-step+f*step;
+      if(prev>=0&&v<0&&!out.set) out.set=t-step+f*step; }
+    prev=v; }
+  return out;
+}
+setStoryBtn=function(s){
+  const el=$("infoStory"); if(!el) return;
+  if(!s||!s.story){ el.innerHTML=""; return; }
+  el.innerHTML=`<button id="storyBtn" class="gold" style="margin-top:6px">📖 ${escS(s.title||"കഥ / വിശദീകരണം വായിക്കാം")}</button>`;
+  $("storyBtn").onclick=()=>openStory(s);
+};
+const _sn3=showNakInfo, _si3=showInfo, _sb3=showBody;
+showNakInfo=function(n){
+  _sn3(n);
+  const i=NAK.indexOf(n), a=i*360/27, b=(i+1)*360/27, ra=Math.floor(a/30), rb=Math.floor((b-1e-6)/30);
+  const [r2,d2]=precess(n[2],n[3]), [az,al]=horiz(r2,d2,getLST()), alt=al/D, rs=starRS(n[2],n[3]);
+  const moonHere=ephem(Date.now()).find(o=>o.key==="moon").nak===i;
+  $("infoNak").innerHTML=`<b>ക്രമം:</b> ${i+1} / 27 • <b>രാശി:</b> ${RASI[ra]} ${fmtDM(a%30)} – ${ra===rb?"":RASI[rb]+" "}${fmtDM(b%30===0?30:b%30)}${moonHere?"<br>🌙 <b>ഇപ്പോൾ ചന്ദ്രൻ ഈ നക്ഷത്രത്തിലാണ്</b>":""}`;
+  $("infoStars").innerHTML=`<b>ഇപ്പോൾ:</b> ${alt>0?`${alt.toFixed(0)}° ഉയരം, ${DN[Math.round(az/D/45)%8]}`:"ചക്രവാളത്തിന് താഴെ"}<br><b>ഉദയം:</b> ${fmt(rs.rise)} • <b>അസ്തമയം:</b> ${fmt(rs.set)}`;
+  placeCard();
+};
+showInfo=function(c){ _si3(c); placeCard(); };
+showBody=function(b){ _sb3(b); placeCard(); };
 </script>
 </body>
 </html>
