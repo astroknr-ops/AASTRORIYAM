@@ -438,13 +438,27 @@ function affine(s,d){
   const X=f(0),Y=f(1);
   return [X[0],Y[0],X[1],Y[1],X[2],Y[2]];
 }
+// ലീസ്റ്റ്-സ്ക്വയർ സിമിലാരിറ്റി (uniform scale + rotation, shear ഇല്ല) — എല്ലാ ആങ്കറുകളും ഉപയോഗിക്കുന്നു
+function similarity(s,d){
+  const n=s.length; let sx=0,sy=0,dx=0,dy=0;
+  for(let i=0;i<n;i++){ sx+=s[i][0]; sy+=s[i][1]; dx+=d[i][0]; dy+=d[i][1]; }
+  sx/=n; sy/=n; dx/=n; dy/=n;
+  let num_r=0,num_i=0,den=0;
+  for(let i=0;i<n;i++){
+    const ax=s[i][0]-sx, ay=s[i][1]-sy, bx=d[i][0]-dx, by=d[i][1]-dy;
+    num_r+=ax*bx+ay*by; num_i+=ax*by-ay*bx; den+=ax*ax+ay*ay;
+  }
+  if(den<1e-9) return null;
+  const re=num_r/den, im=num_i/den;
+  return [re, im, -im, re, dx-(re*sx-im*sy), dy-(im*sx+re*sy)];
+}
 function drawArt(c,lst){
   const im=c.img; if(!im||!im.naturalWidth) return;
   const iw=im.naturalWidth, ih=im.naturalHeight, an=c.anchors; let T=null;
   if(an&&an.length>=2){
     const src=[],dst=[];
     for(const a of an.slice(0,3)){ const p=toScr(a[2],a[3],lst,-90); if(!p) return; src.push([a[0]*iw,a[1]*ih]); dst.push([p.x,p.y]); }
-    T=affine(src,dst);
+    T=similarity(src,dst);   // ഒരേ സ്കെയിൽ + റൊട്ടേഷൻ മാത്രം: ചിത്രം വലിഞ്ഞ് വികൃതമാകില്ല
   }
   ctx.save(); ctx.globalCompositeOperation=im._screen?"screen":"source-over"; ctx.globalAlpha=SET.artA;
   if(T){ ctx.transform(...T); ctx.drawImage(im,0,0); }
