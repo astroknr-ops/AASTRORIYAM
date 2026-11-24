@@ -148,6 +148,7 @@ button,input,select,textarea{font-family:inherit}
 </div>
 <script>
 /* എല്ലാ ഉപകരണത്തിലും ഷീറ്റ് ഓട്ടോമാറ്റിക് ആയി വായിക്കാൻ: Publish to web → CSV ലിങ്ക് ഇവിടെ ഇടുക */
+const APP_T0=Date.now();
 const DEFAULT_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vTyuCin4l1V4N-1PrKRTR2S2uhLo5ALpqds1WqUTeuqMPM_WldhwMRlhMYgLaPP3kuCcHZntIYnZPrY/pub?output=csv";
 const _rn=Date.now.bind(Date); let TOFF=0; Date.now=()=>_rn()+TOFF;
 // AASTRORIYAM. Constellation line data: d3-celestial by Olaf Frohn, BSD 3-Clause License, Copyright (c) 2015 Olaf Frohn. https://github.com/ofrohn/d3-celestial
@@ -730,7 +731,7 @@ async function loadFromCSV(url){
       const r=map.get(c.abbr); if(!r) return;
       if(r[3]&&r[3].trim()) c.malayalam=r[3].trim();
       if(r[2]&&r[2].trim()) c.english=r[2].trim();
-      c.story=(r[11]||"").trim(); c.storyTitle=(r[12]||"").trim();
+      c.story=(r[11]||"").trim(); c.storyTitle=(r[12]||"").trim(); c.infoText=(r[13]||"").trim();
       if(r[4]) c.zodiac=/zodiac/i.test(r[4]);
       c.nak=(r[5]||"").trim(); c.stars=(r[6]||"").trim();
       const art=(r[7]||"").trim(); if(art&&art!==c.artUrl){c.artUrl=art;loadArt(c)}
@@ -885,7 +886,7 @@ const toLocal=ms=>new Date(ms-new Date(ms).getTimezoneOffset()*6e4).toISOString(
 (function(){
   const tb=$("toolbar");
   [["toggleGroundBtn","ഭൂമി"],["toggleGridBtn","ഗ്രിഡ്"],["timeBtn","സമയം"],["searchBtn","തിരയുക"]].forEach(([id,t])=>{ const b=document.createElement("button"); b.id=id; b.textContent=t; tb.insertBefore(b,tb.firstChild); });
-  const IC={searchBtn:"🔍",timeBtn:"🕐",toggleGridBtn:"▦",toggleGroundBtn:"🌄",toggleLinesBtn:"✦",toggleArtBtn:"🖼",toggleLabelsBtn:"Aa",toggleBodiesBtn:"🪐",toggleNakBtn:"✺",gpsBtn:"📍",compassBtn:"🧭",resetViewBtn:"🎯",toggleFullBtn:"⛶",toggleCsvBtn:"📄",togglePanBtn:"📅",toggleDrawerBtn:"☰",toggleSetBtn:"⚙"};
+  const IC={searchBtn:"🔍",timeBtn:"🕐",toggleGridBtn:"▦",toggleGroundBtn:"🌏",toggleLinesBtn:"✦",toggleArtBtn:"🖼",toggleLabelsBtn:"Aa",toggleBodiesBtn:"🪐",toggleNakBtn:"✺",gpsBtn:"📍",compassBtn:"🧭",resetViewBtn:"🎯",toggleFullBtn:"⛶",toggleCsvBtn:"📄",togglePanBtn:"📅",toggleDrawerBtn:"☰",toggleSetBtn:"⚙"};
   const ST=["toggleLinesBtn","toggleArtBtn","toggleLabelsBtn","toggleBodiesBtn","toggleNakBtn","toggleGridBtn","toggleGroundBtn","compassBtn","toggleFullBtn"];
   tb.querySelectorAll("button").forEach(b=>{ b.title=b.textContent.trim(); if(IC[b.id]) b.textContent=IC[b.id]; });
   tb.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; setTimeout(()=>toast(b.title+(ST.includes(b.id)?(b.classList.contains("active")?" : ഓൺ":" : ഓഫ്"):"")),40); });
@@ -919,7 +920,7 @@ function menuShow(show){
   $("toolbar").classList.toggle("hide",!show);
   $("menuBtn").textContent=show?"✕":"☰";
   clearTimeout(menuTimer);
-  if(show) menuTimer=setTimeout(()=>menuShow(false),10000);
+  if(show) menuTimer=setTimeout(()=>menuShow(false),Math.max(10000,30000-(Date.now()-APP_T0)));
 }
 $("menuBtn").onclick=()=>menuShow($("toolbar").classList.contains("hide"));
 document.addEventListener("pointerdown",e=>{ if(!$("toolbar").classList.contains("hide")&&e.target.closest(".toolbar,.pan")) menuShow(true); },true);
@@ -948,18 +949,18 @@ const escS=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;"
 let EXTRA={};
 function buildExtras(rows){
   EXTRA={};
-  rows.forEach(r=>{ const v=(r[11]||"").trim(); if(!v) return; const s={story:v,title:(r[12]||"").trim()};
+  rows.forEach(r=>{ const v=(r[11]||"").trim(), tx=(r[13]||"").trim(); if(!v&&!tx) return; const s={story:v,title:(r[12]||"").trim(),text:tx,img:(r[7]||"").trim()};
     [(r[1]||"").trim().toUpperCase(),(r[3]||"").trim()].forEach(k=>{ if(k) EXTRA[k]=s; }); });
 }
 const storyFor=keys=>{ for(const k of keys){ if(!k) continue; const s=EXTRA[String(k).toUpperCase()]||EXTRA[k]; if(s) return s; } return null; };
 function setStoryBtn(s){
   const el=$("infoStory"); if(!el) return;
-  if(!s){ el.innerHTML=""; return; }
-  el.innerHTML=`<button id="storyBtn" class="gold" style="margin-top:6px">📖 ${escS(s.title||"കഥ / വിശദീകരണം വായിക്കാം")}</button>`;
-  $("storyBtn").onclick=()=>openStory(s);
+  if(!s||(!s.story&&!s.text)){ el.innerHTML=""; return; }
+  el.innerHTML=(s.text?`<div class="stx">${escS(s.text).replace(/\n/g,"<br>")}</div>`:"")+(s.story?`<button id="storyBtn" class="gold" style="margin-top:6px">📖 ${escS(s.title||"കൂടുതൽ അറിയാൻ")}</button>`:"");
+  if(s.story) $("storyBtn").onclick=()=>openStory(s);
 }
 const _si=showInfo, _sb=showBody, _sn=showNakInfo;
-showInfo=function(c){ _si(c); setStoryBtn(c.story?{story:c.story,title:c.storyTitle}:storyFor([c.abbr,c.malayalam,c.english])); };
+showInfo=function(c){ _si(c); setStoryBtn((c.story||c.infoText)?{story:c.story,title:c.storyTitle,text:c.infoText}:storyFor([c.abbr,c.malayalam,c.english])); };
 showBody=function(b){ _sb(b); setStoryBtn(storyFor([b.key,b.ml])); };
 showNakInfo=function(n){ _sn(n); setStoryBtn(storyFor([n[0]])); };
 function fmtStory(t){
@@ -996,14 +997,14 @@ buildExtras=function(rows){
     const s={story:v,title:(r[12]||"").trim(),img:im};
     [(r[1]||"").trim().toUpperCase(),(r[3]||"").trim()].forEach(k=>{ if(k) EXTRA[k]=s; }); });
 };
-function addCardImg(src){
+function addCardImg(src,cap){
   const el=$("infoStory"); if(!el||!src) return;
-  el.insertAdjacentHTML("afterbegin",`<img src="${escS(src)}" alt="" onerror="this.style.display='none'" style="display:block;width:100%;max-width:240px;border-radius:12px;margin:6px 0">`);
+  el.insertAdjacentHTML("afterbegin",`<img src="${escS(src)}" alt="" onerror="this.style.display='none'" style="display:block;width:100%;max-width:240px;border-radius:12px;margin:6px 0" onload="this.nextElementSibling&&(this.nextElementSibling.style.display='block')">${cap?`<div style="display:none;font-size:10px;color:#94a3b8;margin-bottom:4px">${cap}</div>`:""}`);
 }
 const nkNo=n=>String(NAK.indexOf(n)+1).padStart(2,"0");
 const _sn2=showNakInfo, _sb2=showBody;
 showNakInfo=function(n){ _sn2(n); const e=EXTRA[n[0]]; addCardImg((e&&e.img)||`nak/${nkNo(n)}.png`); };
-showBody=function(b){ _sb2(b); if(b.key==="moon"||b.ring) return; const e=EXTRA[b.key.toUpperCase()]||EXTRA[b.ml]; addCardImg((e&&e.img)||`planets/${b.key}.png`); };
+showBody=function(b){ _sb2(b); if(b.key==="moon"||b.ring) return; const e=EXTRA[b.key.toUpperCase()]||EXTRA[b.ml]; addCardImg((e&&e.img)||`planets/${b.key}.png`,"ഗ്രഹത്തിന്റെ ചിത്രം വലിപ്പത്തിന്റെ അനുപാതത്തിൽ (സ്കെയിലിൽ) അല്ല"); };
 // ===== നക്ഷത്ര കാർഡ്: രാശി, ക്രമം, ഇപ്പോഴത്തെ ഉയരം, ഉദയാസ്തമയം; കാർഡ് ഫൂട്ടറിന് മുകളിൽ =====
 const placeCard=()=>{ const f=$("footer"); $("infoCard").style.bottom=((f?f.offsetHeight:50)+18)+"px"; };
 const fmtDM=x=>{ const d=Math.floor(x), m=Math.round((x-d)*60); return m===60?`${d+1}°00′`:`${d}°${String(m).padStart(2,"0")}′`; };
@@ -1184,7 +1185,7 @@ function calHTML(y,m){
   st.textContent="#helpWin{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,.6)}#helpWin .hb{position:relative;max-width:min(92vw,420px);max-height:84vh;overflow:auto;padding:16px 18px;border-radius:14px;background:var(--panel);border:1px solid var(--border);color:var(--text);font-size:13px;line-height:1.7}#helpWin h3{margin:0 0 6px;color:var(--accent)}#helpWin ul{margin:6px 0 10px;padding-left:18px}#helpWin .hx{position:absolute;right:8px;top:8px;padding:2px 8px}#hudX{pointer-events:auto}#ftx{position:absolute;right:6px;top:4px;padding:0 6px;font-size:11px}";
   document.head.appendChild(st);
   const w=document.createElement("div"); w.id="helpWin";
-  w.innerHTML='<div class="hb"><button class="hx" id="helpX">✕</button><h3>ആസ്ട്രോറിയം ഉപയോഗിക്കുന്ന വിധം</h3><ul><li>ഫോൺ ആകാശത്തേക്ക് ചൂണ്ടുക — ആപ്പ് ആ ഭാഗത്തെ നക്ഷത്രങ്ങൾ കാണിക്കും (കോമ്പസ് ഓൺ ആയിരിക്കണം).</li><li>സ്ക്രീനിൽ വിരൽ കൊണ്ട് വലിച്ച് ആകാശം തിരിക്കാം; രണ്ട് വിരൽ കൊണ്ട് സൂം ചെയ്യാം.</li><li>നക്ഷത്രത്തിലോ രാശിയിലോ ഗ്രഹത്തിലോ തൊട്ടാൽ വിവരങ്ങളും കഥയും കാണാം.</li><li>☰ അമർത്തിയാൽ 88 രാശികളുടെ പട്ടികയും തിരയലും.</li><li>വശത്തെ ബട്ടണുകൾ: രാശി വരകൾ, ചിത്രം, പേരുകൾ, ചന്ദ്രൻ/ഗ്രഹങ്ങൾ, 27 നക്ഷത്രം, ലൊക്കേഷൻ (GPS).</li><li>🕐 സമയം മാറ്റി മറ്റൊരു ദിവസത്തെ ആകാശം കാണാം.</li></ul><button id="helpOk" class="active">മനസ്സിലായി</button></div>';
+  w.innerHTML='<div class="hb"><button class="hx" id="helpX">✕</button><h3>ആസ്ട്രോറിയം ഉപയോഗിക്കുന്ന വിധം</h3><ul><li>ഫോൺ ആകാശത്തേക്ക് ചൂണ്ടുക — ആപ്പ് ആ ഭാഗത്തെ നക്ഷത്രങ്ങൾ കാണിക്കും (കോമ്പസ് ഓൺ ആയിരിക്കണം).</li><li>സ്ക്രീനിൽ വിരൽ കൊണ്ട് വലിച്ച് ആകാശം തിരിക്കാം; രണ്ട് വിരൽ കൊണ്ട് സൂം ചെയ്യാം.</li><li>നക്ഷത്രത്തിലോ രാശിയിലോ ഗ്രഹത്തിലോ തൊട്ടാൽ വിവരങ്ങൾ കാണാം. "കൂടുതൽ അറിയാൻ" അമർത്തിയാൽ വിശദമായ കഥയും ചിത്രങ്ങളും തുറക്കും; അടച്ചാൽ തിരികെ വരും.</li><li>മെനു ബട്ടൺ: വലത്തെ താഴത്തെ മൂലയിലെ വൃത്താകൃതിയിലുള്ള ☰ / ✕ ബട്ടൺ. ഇത് വശത്തെ ബട്ടൺ പാനൽ തുറക്കുന്നു (☰), അടയ്ക്കുന്നു (✕). തൊടാതിരുന്നാൽ പാനൽ തനിയെ അടയും.</li><li>പാനലിലെ ബട്ടണുകൾ: രാശി വരകൾ, ചിത്രം, പേരുകൾ, ചന്ദ്രൻ/ഗ്രഹങ്ങൾ, 27 നക്ഷത്രം, ലൊക്കേഷൻ (GPS). ആദ്യത്തെ 30 സെക്കൻഡ് പേരും കാണിക്കും, പിന്നെ ചിഹ്നം മാത്രം (ചിഹ്നത്തിൽ തൊട്ടാൽ പേര് കാണാം).</li><li>🌏 ഭൂമി ബട്ടൺ ഓഫ് ചെയ്താൽ ചക്രവാളത്തിന് താഴത്തെ ഭാഗവും കാണാം; സ്ക്രീൻ മുഴുവൻ ആകാശം കിട്ടും.</li><li>🕐 സമയം മാറ്റി മറ്റൊരു ദിവസത്തെ ആകാശം കാണാം.</li><li>ഗ്രഹങ്ങളുടെ ചിത്രങ്ങൾ യഥാർത്ഥ വലിപ്പത്തിന്റെ അനുപാതത്തിൽ (സ്കെയിലിൽ) അല്ല.</li></ul><button id="helpOk" class="active">മനസ്സിലായി</button></div>';
   document.body.appendChild(w);
   let ht=null; const closeH=()=>{ w.style.display="none"; clearTimeout(ht); }; 
   $$("helpX").onclick=closeH; $$("helpOk").onclick=closeH; w.onclick=e=>{ if(e.target===w) closeH(); };
@@ -1219,6 +1220,17 @@ function applyGloss(rows){
   setGloss(g);
 }
 try{ const g=JSON.parse(localStorage.getItem("aa_gloss")||"[]"); if(g.length) setGloss(g); }catch{}
+
+// ===== patch16: ടൂൾബാറിൽ ആദ്യ 30 സെക്കൻഡ് പേരുകൾ =====
+(function(){
+  const st=document.createElement("style");
+  st.textContent=".toolbar.lbl{width:auto;align-items:stretch}.toolbar.lbl button{width:auto;height:34px;padding:0 12px;font-size:13px;white-space:nowrap;text-align:left}.stx{margin-top:6px;white-space:normal}";
+  document.head.appendChild(st);
+  const tb=document.getElementById("toolbar"), orig=new Map();
+  tb.querySelectorAll("button").forEach(b=>{ const t=b.textContent.trim(); if(b.title&&b.title!==t){ orig.set(b,b.textContent); b.textContent=t+" "+b.title; } });
+  tb.classList.add("lbl");
+  setTimeout(()=>{ orig.forEach((t,b)=>{ b.textContent=t; }); tb.classList.remove("lbl"); },Math.max(1000,30000-(Date.now()-APP_T0)));
+})();
 </script>
 </body>
 </html>
