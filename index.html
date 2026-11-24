@@ -740,7 +740,7 @@ async function loadFromCSV(url){
     buildExtras(rows); normNames(); applyGloss(rows); setNotice(rows,all[0]); try{localStorage.setItem("nl_csv",url)}catch{}
     renderChecklist(); needs=true;
     st.textContent=`CSV അപ്‌ഡേറ്റ് ആയി (${rows.length} വരികൾ)`;
-  }catch{ st.textContent="CSV വായിക്കാൻ കഴിഞ്ഞില്ല (ബിൽറ്റ്-ഇൻ ഡാറ്റ ഉപയോഗിക്കുന്നു)"; }
+  }catch(e){ window.SHEETINFO="⚠ ഷീറ്റ് ലോഡ് ആയില്ല: "+(e&&e.message||e); st.textContent="CSV വായിക്കാൻ കഴിഞ്ഞില്ല (ബിൽറ്റ്-ഇൻ ഡാറ്റ ഉപയോഗിക്കുന്നു)"; }
 }
 $("loadCsvBtn").onclick=()=>{ const u=$("csvInput").value.trim(); if(u) loadFromCSV(u); };
 
@@ -749,7 +749,7 @@ resize();
 renderChecklist();
 if(window.innerWidth<700){ $("drawer").classList.add("hidden"); $("toggleDrawerBtn").classList.remove("active"); }
 $("statusText").textContent=`${cons.length} കോൺസ്റ്റലേഷൻ • ${STARS.length} നക്ഷത്രം • ${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E`;
-try{ const u=localStorage.getItem("nl_csv")||DEFAULT_CSV; if(u){$("csvInput").value=u;loadFromCSV(u)} }catch{}
+try{ const u=DEFAULT_CSV||localStorage.getItem("nl_csv"); if(u){$("csvInput").value=u;loadFromCSV(u)} }catch{}
 requestAnimationFrame(frame);
 $("menuBtn").onclick=()=>{ const t=$("toolbar"); t.classList.toggle("hide"); $("menuBtn").textContent=t.classList.contains("hide")?"☰":"✕"; };
 $("toggleCsvBtn").onclick=function(){ const c=$("csvBar"); c.classList.toggle("hide"); this.classList.toggle("active",!c.classList.contains("hide")); };
@@ -1185,7 +1185,7 @@ function calHTML(y,m){
   st.textContent="#helpWin{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,.6)}#helpWin .hb{position:relative;max-width:min(92vw,420px);max-height:84vh;overflow:auto;padding:16px 18px;border-radius:14px;background:var(--panel);border:1px solid var(--border);color:var(--text);font-size:13px;line-height:1.7}#helpWin h3{margin:0 0 6px;color:var(--accent)}#helpWin ul{margin:6px 0 10px;padding-left:18px}#helpWin .hx{position:absolute;right:8px;top:8px;padding:2px 8px}#hudX{pointer-events:auto}#ftx{position:absolute;right:6px;top:4px;padding:0 6px;font-size:11px}";
   document.head.appendChild(st);
   const w=document.createElement("div"); w.id="helpWin";
-  w.innerHTML='<div class="hb"><button class="hx" id="helpX">✕</button><h3>ആസ്ട്രോറിയം ഉപയോഗിക്കുന്ന വിധം</h3><ul><li>ഫോൺ ആകാശത്തേക്ക് ചൂണ്ടുക — ആപ്പ് ആ ഭാഗത്തെ നക്ഷത്രങ്ങൾ കാണിക്കും (കോമ്പസ് ഓൺ ആയിരിക്കണം).</li><li>സ്ക്രീനിൽ വിരൽ കൊണ്ട് വലിച്ച് ആകാശം തിരിക്കാം; രണ്ട് വിരൽ കൊണ്ട് സൂം ചെയ്യാം.</li><li>നക്ഷത്രത്തിലോ രാശിയിലോ ഗ്രഹത്തിലോ തൊട്ടാൽ വിവരങ്ങൾ കാണാം. "കൂടുതൽ അറിയാൻ" അമർത്തിയാൽ വിശദമായ കഥയും ചിത്രങ്ങളും തുറക്കും; അടച്ചാൽ തിരികെ വരും.</li><li>മെനു ബട്ടൺ: വലത്തെ താഴത്തെ മൂലയിലെ വൃത്താകൃതിയിലുള്ള ☰ / ✕ ബട്ടൺ. ഇത് വശത്തെ ബട്ടൺ പാനൽ തുറക്കുന്നു (☰), അടയ്ക്കുന്നു (✕). തൊടാതിരുന്നാൽ പാനൽ തനിയെ അടയും.</li><li>പാനലിലെ ബട്ടണുകൾ: രാശി വരകൾ, ചിത്രം, പേരുകൾ, ചന്ദ്രൻ/ഗ്രഹങ്ങൾ, 27 നക്ഷത്രം, ലൊക്കേഷൻ (GPS). ആദ്യത്തെ 30 സെക്കൻഡ് പേരും കാണിക്കും, പിന്നെ ചിഹ്നം മാത്രം (ചിഹ്നത്തിൽ തൊട്ടാൽ പേര് കാണാം).</li><li>🌏 ഭൂമി ബട്ടൺ ഓഫ് ചെയ്താൽ ചക്രവാളത്തിന് താഴത്തെ ഭാഗവും കാണാം; സ്ക്രീൻ മുഴുവൻ ആകാശം കിട്ടും.</li><li>🕐 സമയം മാറ്റി മറ്റൊരു ദിവസത്തെ ആകാശം കാണാം.</li><li>ഗ്രഹങ്ങളുടെ ചിത്രങ്ങൾ യഥാർത്ഥ വലിപ്പത്തിന്റെ അനുപാതത്തിൽ (സ്കെയിലിൽ) അല്ല.</li></ul><button id="helpOk" class="active">മനസ്സിലായി</button></div>';
+  w.innerHTML='<div class="hb"><button class="hx" id="helpX">✕</button><h3>ആസ്ട്രോറിയം ഉപയോഗിക്കുന്ന വിധം</h3><ul><li>ഫോൺ ആകാശത്തേക്ക് ചൂണ്ടുക — ആപ്പ് ആ ഭാഗത്തെ നക്ഷത്രങ്ങൾ കാണിക്കും (കോമ്പസ് ഓൺ ആയിരിക്കണം).</li><li>സ്ക്രീനിൽ വിരൽ കൊണ്ട് വലിച്ച് ആകാശം തിരിക്കാം; രണ്ട് വിരൽ കൊണ്ട് സൂം ചെയ്യാം.</li><li>നക്ഷത്രത്തിലോ രാശിയിലോ ഗ്രഹത്തിലോ തൊട്ടാൽ വിവരങ്ങൾ കാണാം. "കൂടുതൽ അറിയാൻ" അമർത്തിയാൽ വിശദമായ കഥയും ചിത്രങ്ങളും തുറക്കും; അടച്ചാൽ തിരികെ വരും.</li><li>മെനു ബട്ടൺ: വലത്തെ താഴത്തെ മൂലയിലെ വൃത്താകൃതിയിലുള്ള ☰ / ✕ ബട്ടൺ. ഇത് വശത്തെ ബട്ടൺ പാനൽ തുറക്കുന്നു (☰), അടയ്ക്കുന്നു (✕). തൊടാതിരുന്നാൽ പാനൽ തനിയെ അടയും.</li><li>പാനലിലെ ബട്ടണുകൾ: രാശി വരകൾ, ചിത്രം, പേരുകൾ, ചന്ദ്രൻ/ഗ്രഹങ്ങൾ, 27 നക്ഷത്രം, ലൊക്കേഷൻ (GPS). ആദ്യത്തെ 30 സെക്കൻഡ് പേരും കാണിക്കും, പിന്നെ ചിഹ്നം മാത്രം (ചിഹ്നത്തിൽ തൊട്ടാൽ പേര് കാണാം).</li><li>🌏 ഭൂമി ബട്ടൺ ഓഫ് ചെയ്താൽ ചക്രവാളത്തിന് താഴത്തെ ഭാഗവും കാണാം; സ്ക്രീൻ മുഴുവൻ ആകാശം കിട്ടും.</li><li>🕐 സമയം മാറ്റി മറ്റൊരു ദിവസത്തെ ആകാശം കാണാം.</li><li>ഗ്രഹങ്ങളുടെ ചിത്രങ്ങൾ യഥാർത്ഥ വലിപ്പത്തിന്റെ അനുപാതത്തിൽ (സ്കെയിലിൽ) അല്ല.</li></ul><div id="helpInfo" style="font-size:10px;color:#94a3b8;margin-bottom:8px"></div><button id="helpOk" class="active">മനസ്സിലായി</button></div>';
   document.body.appendChild(w);
   let ht=null; const closeH=()=>{ w.style.display="none"; clearTimeout(ht); }; 
   $$("helpX").onclick=closeH; $$("helpOk").onclick=closeH; w.onclick=e=>{ if(e.target===w) closeH(); };
@@ -1249,6 +1249,7 @@ function setNotice(rows,hdr){
   const hn=(hdr||[]).map(h=>(h||"").toLowerCase().replace(/[\s_\-]/g,"")); let ni=hn.findIndex(h=>["notice","scroll","ticker","todayspecial","announcement"].includes(h)); if(ni<0) ni=14; const li=ni+1;
   let r=null; for(let i=rows.length-1;i>=0;i--){ if((rows[i][ni]||"").trim()){ r=rows[i]; break; } }
   if(location.hash==="#debug") alert("ഷീറ്റ് വരികൾ: "+rows.length+"\nതലക്കെട്ടുകൾ: "+(hdr||[]).join(", ")+"\nNotice കോളം: "+String.fromCharCode(65+ni)+"\nകണ്ടത്: "+(r?r[ni].slice(0,60):"ഒന്നുമില്ല"));
+  window.SHEETINFO="ഷീറ്റ്: "+rows.length+" വരികൾ • അറിയിപ്പ്: "+(r?"ഉണ്ട്":"ഇല്ല")+" • കോളം "+String.fromCharCode(65+ni);
   if(!r||tkClosed){ tk.style.display="none"; setFH(); return; }
   const tx=r[ni].trim().replace(/\s+/g," "), ln=(r[li]||"").trim(), inn=document.getElementById("tkIn");
   inn.textContent=tx+(ln?"   ➜   ":""); tk.dataset.link=ln;
@@ -1256,6 +1257,8 @@ function setNotice(rows,hdr){
   inn.style.setProperty("--tkd",Math.max(12,Math.round((tx.length+40)*0.22))+"s");
   tk.style.display="flex"; setFH();
 }
+
+setInterval(()=>{ const h=document.getElementById("helpInfo"); if(h) h.textContent=window.SHEETINFO||"ഷീറ്റ്: ലോഡ് ചെയ്യുന്നു..."; },1000);
 </script>
 </body>
 </html>
