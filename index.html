@@ -737,7 +737,7 @@ async function loadFromCSV(url){
       const art=(r[7]||"").trim(); if(art&&art!==c.artUrl){c.artUrl=art;loadArt(c)}
       try{const an=(r[10]||"").trim(); if(an) c.anchors=JSON.parse(an)}catch{}
     });
-    buildExtras(rows); normNames(); applyGloss(rows); try{localStorage.setItem("nl_csv",url)}catch{}
+    buildExtras(rows); normNames(); applyGloss(rows); setNotice(rows); try{localStorage.setItem("nl_csv",url)}catch{}
     renderChecklist(); needs=true;
     st.textContent=`CSV അപ്‌ഡേറ്റ് ആയി (${rows.length} വരികൾ)`;
   }catch{ st.textContent="CSV വായിക്കാൻ കഴിഞ്ഞില്ല (ബിൽറ്റ്-ഇൻ ഡാറ്റ ഉപയോഗിക്കുന്നു)"; }
@@ -1231,6 +1231,29 @@ try{ const g=JSON.parse(localStorage.getItem("aa_gloss")||"[]"); if(g.length) se
   tb.classList.add("lbl");
   setTimeout(()=>{ orig.forEach((t,b)=>{ b.textContent=t; }); tb.classList.remove("lbl"); },Math.max(1000,30000-(Date.now()-APP_T0)));
 })();
+
+// ===== patch17: ഇന്നത്തെ പ്രത്യേകത — സ്ക്രോൾ അറിയിപ്പ് (ഷീറ്റ്: O=Notice, P=Notice_Link; ഏറ്റവും താഴത്തെ O വരി കാണിക്കും) =====
+let tkClosed=false;
+(function(){
+  const st=document.createElement("style");
+  st.textContent="#ticker{display:none;align-items:center;gap:6px;padding:3px 8px;font-size:12px;background:rgba(251,191,36,.16);border-bottom:1px solid var(--border);cursor:pointer}#ticker .tk-win{overflow:hidden;flex:1;white-space:nowrap}#tkIn{display:inline-block;padding-left:100%;animation:tkmove var(--tkd,20s) linear infinite}#tkIn a{color:var(--accent2,#fbbf24);text-decoration:underline;font-weight:700}#ticker .tk-win:active #tkIn{animation-play-state:paused}@keyframes tkmove{to{transform:translateX(-100%)}}#tkX{padding:0 6px;font-size:11px;flex:none}";
+  document.head.appendChild(st);
+  const ft=document.getElementById("footer"), tk=document.createElement("div"); tk.id="ticker";
+  tk.innerHTML='<span>📢</span><div class="tk-win"><span id="tkIn"></span></div><button id="tkX">✕</button>';
+  ft.insertBefore(tk,ft.firstChild);
+  document.getElementById("tkX").onclick=e=>{ e.stopPropagation(); tkClosed=true; tk.style.display="none"; setFH(); };
+  tk.onclick=()=>{ if(tk.dataset.link) openStory({story:tk.dataset.link,title:"ഇന്നത്തെ പ്രത്യേകത"}); };
+})();
+function setNotice(rows){
+  const tk=document.getElementById("ticker"); if(!tk) return;
+  let r=null; for(let i=rows.length-1;i>=0;i--){ if((rows[i][14]||"").trim()){ r=rows[i]; break; } }
+  if(!r||tkClosed){ tk.style.display="none"; setFH(); return; }
+  const tx=r[14].trim().replace(/\s+/g," "), ln=(r[15]||"").trim(), inn=document.getElementById("tkIn");
+  inn.textContent=tx+(ln?"   ➜   ":""); tk.dataset.link=ln;
+  if(ln){ const a=document.createElement("a"); a.textContent="കൂടുതൽ അറിയാൻ ഇവിടെ ക്ലിക്ക് ചെയ്യുക"; inn.appendChild(a); }
+  inn.style.setProperty("--tkd",Math.max(12,Math.round((tx.length+40)*0.22))+"s");
+  tk.style.display="flex"; setFH();
+}
 </script>
 </body>
 </html>
