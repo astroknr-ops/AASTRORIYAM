@@ -125,10 +125,10 @@ button,input,select,textarea{font-family:inherit}
 <div class="infopanel hide" id="infoPanel"><iframe id="infoFrame" title="കൂടുതൽ വിവരങ്ങൾ"></iframe></div>
 <div id="toast"></div>
 <div class="footer" id="footer">
-  <div id="hud"></div>
+  <div id="hud"></div><button id="hudX" style="display:none;position:absolute;right:4px;top:2px;padding:0 6px;font-size:11px">✕</button>
   <div class="row"><h1>ആസ്ട്രോറിയം <span style="font-weight:400">(AASTRORIUM)</span></h1><small id="statusText">Loading...</small><button id="moreBtn" class="more">കൂടുതൽ വിവരങ്ങൾ ▴</button></div>
-  <div class="tag">ആസ്ട്രോകേരളയുടെ നക്ഷത്ര നിരീക്ഷണ സഹായി</div>
-  <div class="copy">© 2026 ആസ്ട്രോ കണ്ണൂർ &nbsp;•&nbsp; പകർപ്പവകാശം സംരക്ഷിതം<br>ആസ്ട്രോ കണ്ണൂരിനു വേണ്ടി നിർമ്മിച്ചത് &nbsp;•&nbsp; നിർമ്മാണം: പ്രഭാകരൻ കോവൂർ</div>
+  <div id="ftExtra"><div class="tag">ആസ്ട്രോകേരളയുടെ നക്ഷത്ര നിരീക്ഷണ സഹായി</div>
+  <div class="copy">© 2026 ആസ്ട്രോ കണ്ണൂർ &nbsp;•&nbsp; പകർപ്പവകാശം സംരക്ഷിതം<br>ആസ്ട്രോ കണ്ണൂരിനു വേണ്ടി നിർമ്മിച്ചത് &nbsp;•&nbsp; നിർമ്മാണം: പ്രഭാകരൻ കോവൂർ</div></div>
 </div>
 <button class="fab" id="menuBtn">☰</button>
 <div class="toolbar" id="toolbar">
@@ -147,6 +147,8 @@ button,input,select,textarea{font-family:inherit}
   <button id="toggleDrawerBtn" class="active">ചെക്ക് ലിസ്റ്റ്</button>
 </div>
 <script>
+/* എല്ലാ ഉപകരണത്തിലും ഷീറ്റ് ഓട്ടോമാറ്റിക് ആയി വായിക്കാൻ: Publish to web → CSV ലിങ്ക് ഇവിടെ ഇടുക */
+const DEFAULT_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vTyuCin4l1V4N-1PrKRTR2S2uhLo5ALpqds1WqUTeuqMPM_WldhwMRlhMYgLaPP3kuCcHZntIYnZPrY/pub?output=csv";
 const _rn=Date.now.bind(Date); let TOFF=0; Date.now=()=>_rn()+TOFF;
 // AASTRORIYAM. Constellation line data: d3-celestial by Olaf Frohn, BSD 3-Clause License, Copyright (c) 2015 Olaf Frohn. https://github.com/ofrohn/d3-celestial
 // ---- ഡാറ്റ (ബിൽഡ് സ്ക്രിപ്റ്റ് ചേർത്തത്): യഥാർത്ഥ നക്ഷത്ര സ്ഥാനങ്ങൾ [RA മണിക്കൂർ, Dec ഡിഗ്രി, മാഗ്നിറ്റ്യൂഡ്, B-V]
@@ -239,7 +241,7 @@ const TN=["പ്രഥമ","ദ്വിതീയ","തൃതീയ","ചതു
 const RASI=["മേടം","ഇടവം","മിഥുനം","കർക്കടകം","ചിങ്ങം","കന്നി","തുലാം","വൃശ്ചികം","ധനു","മകരം","കുംഭം","മീനം"];
 function tithiName(el){
   const i=Math.floor(el/12);
-  return (i===14?"പൗർണ്ണമി":i===29?"അമാവാസി":(i<15?"ശുക്ലപക്ഷം ":"കൃഷ്ണപക്ഷം ")+TN[i%15]);
+  return (i===14?"പൗർണ്ണമി":i===29?"അമാവാസി":(i<15?"അമാവാസി":"പൗർണ്ണമി")+" കഴിഞ്ഞ് "+(i%15+1)+" ദിവസം");
 }
 const moonOf=t=>ephem(t).find(o=>o.key==="moon");
 function nextCross(fn,period,ms){
@@ -402,7 +404,7 @@ function ephem(ms=Date.now()){
   const el=rev(mlon-sunLon), ayan=23.857+0.013969*d/365.2425;   // ലാഹിരി അയനാംശം
   out.push({key:"moon",ml:"ചന്ദ്രൻ",col:"#f1f5f9",rad:11,par:Math.asin(1/m.r),ayan,sid:rev(mlon-ayan),el,lit:(1-cs(el))/2,
     nak:Math.floor(rev(mlon-ayan)/(360/27)),
-    phase:el<8||el>352?"അമാവാസി":el<172?"വെളുത്ത പക്ഷം (വളരുന്നു)":el<188?"പൗർണ്ണമി":"കറുത്ത പക്ഷം (തേയുന്നു)",
+    phase:el<8||el>352?"അമാവാസി":el<172?"വളരുന്നു":el<188?"പൗർണ്ണമി":"തേയുന്നു",
     ...eq(m.r*cs(mlat)*cs(mlon),m.r*cs(mlat)*sn(mlon),m.r*sn(mlat))});
   const P={}; PL.forEach(p=>P[p[0]]=orbit(p[0],d));
   const Mj=P.jupiter.M, Mt=P.saturn.M;
@@ -734,7 +736,7 @@ async function loadFromCSV(url){
       const art=(r[7]||"").trim(); if(art&&art!==c.artUrl){c.artUrl=art;loadArt(c)}
       try{const an=(r[10]||"").trim(); if(an) c.anchors=JSON.parse(an)}catch{}
     });
-    buildExtras(rows); normNames(); try{localStorage.setItem("nl_csv",url)}catch{}
+    buildExtras(rows); normNames(); applyGloss(rows); try{localStorage.setItem("nl_csv",url)}catch{}
     renderChecklist(); needs=true;
     st.textContent=`CSV അപ്‌ഡേറ്റ് ആയി (${rows.length} വരികൾ)`;
   }catch{ st.textContent="CSV വായിക്കാൻ കഴിഞ്ഞില്ല (ബിൽറ്റ്-ഇൻ ഡാറ്റ ഉപയോഗിക്കുന്നു)"; }
@@ -746,7 +748,7 @@ resize();
 renderChecklist();
 if(window.innerWidth<700){ $("drawer").classList.add("hidden"); $("toggleDrawerBtn").classList.remove("active"); }
 $("statusText").textContent=`${cons.length} കോൺസ്റ്റലേഷൻ • ${STARS.length} നക്ഷത്രം • ${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E`;
-try{ const u=localStorage.getItem("nl_csv"); if(u){$("csvInput").value=u;loadFromCSV(u)} }catch{}
+try{ const u=localStorage.getItem("nl_csv")||DEFAULT_CSV; if(u){$("csvInput").value=u;loadFromCSV(u)} }catch{}
 requestAnimationFrame(frame);
 $("menuBtn").onclick=()=>{ const t=$("toolbar"); t.classList.toggle("hide"); $("menuBtn").textContent=t.classList.contains("hide")?"☰":"✕"; };
 $("toggleCsvBtn").onclick=function(){ const c=$("csvBar"); c.classList.toggle("hide"); this.classList.toggle("active",!c.classList.contains("hide")); };
@@ -1174,6 +1176,49 @@ function calHTML(y,m){
     mk("cInd","ഇന്ത്യൻ നക്ഷത്ര വരകൾ (ഓറഞ്ച്)","ind",true); mk("cMess","മെസ്സിയർ വസ്തുക്കൾ","mess",true); mk("cArtAll","എല്ലാ രാശി ചിത്രങ്ങളും ഒരുമിച്ച് (സാധാരണ: ഫോക്കസിലുള്ളത് മാത്രം)","artAll",false);
     const lg=document.createElement("div"); lg.style.cssText="margin-top:8px;font-size:11px;color:#94a3b8"; lg.innerHTML='<span style="color:#38bdf8">▬▬</span> IAU രാശി വരകൾ &nbsp; <span style="color:#fb923c">▬▬</span> ഇന്ത്യൻ രൂപങ്ങൾ'; setp.appendChild(lg); }
 })();
+
+// ===== patch14: സഹായ വിൻഡോ, ക്ലോസ് ചെയ്യാവുന്ന ബോക്സുകൾ, 30 സെക്കൻഡ് ഓട്ടോ-ഹൈഡ് =====
+(function(){
+  const $$=id=>document.getElementById(id);
+  const st=document.createElement("style");
+  st.textContent="#helpWin{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,.6)}#helpWin .hb{position:relative;max-width:min(92vw,420px);max-height:84vh;overflow:auto;padding:16px 18px;border-radius:14px;background:var(--panel);border:1px solid var(--border);color:var(--text);font-size:13px;line-height:1.7}#helpWin h3{margin:0 0 6px;color:var(--accent)}#helpWin ul{margin:6px 0 10px;padding-left:18px}#helpWin .hx{position:absolute;right:8px;top:8px;padding:2px 8px}#hudX{pointer-events:auto}#ftx{position:absolute;right:6px;top:4px;padding:0 6px;font-size:11px}";
+  document.head.appendChild(st);
+  const w=document.createElement("div"); w.id="helpWin";
+  w.innerHTML='<div class="hb"><button class="hx" id="helpX">✕</button><h3>ആസ്ട്രോറിയം ഉപയോഗിക്കുന്ന വിധം</h3><ul><li>ഫോൺ ആകാശത്തേക്ക് ചൂണ്ടുക — ആപ്പ് ആ ഭാഗത്തെ നക്ഷത്രങ്ങൾ കാണിക്കും (കോമ്പസ് ഓൺ ആയിരിക്കണം).</li><li>സ്ക്രീനിൽ വിരൽ കൊണ്ട് വലിച്ച് ആകാശം തിരിക്കാം; രണ്ട് വിരൽ കൊണ്ട് സൂം ചെയ്യാം.</li><li>നക്ഷത്രത്തിലോ രാശിയിലോ ഗ്രഹത്തിലോ തൊട്ടാൽ വിവരങ്ങളും കഥയും കാണാം.</li><li>☰ അമർത്തിയാൽ 88 രാശികളുടെ പട്ടികയും തിരയലും.</li><li>വശത്തെ ബട്ടണുകൾ: രാശി വരകൾ, ചിത്രം, പേരുകൾ, ചന്ദ്രൻ/ഗ്രഹങ്ങൾ, 27 നക്ഷത്രം, ലൊക്കേഷൻ (GPS).</li><li>🕐 സമയം മാറ്റി മറ്റൊരു ദിവസത്തെ ആകാശം കാണാം.</li></ul><button id="helpOk" class="active">മനസ്സിലായി</button></div>';
+  document.body.appendChild(w);
+  let ht=null; const closeH=()=>{ w.style.display="none"; clearTimeout(ht); }; 
+  $$("helpX").onclick=closeH; $$("helpOk").onclick=closeH; w.onclick=e=>{ if(e.target===w) closeH(); };
+  ht=setTimeout(closeH,30000);
+  // HUD (ഉയരം/ദിശ/RA/Dec) ക്ലോസ് ബട്ടൺ
+  const hx=$$("hudX"), hud=$$("hud");
+  hx.onclick=()=>{ SET.hud=false; try{saveSet()}catch{}; const c=$$("cHud"); if(c) c.checked=false; hx.style.display="none"; needs=true; };
+  setInterval(()=>{ hx.style.display=(SET.hud&&hud&&hud.style.display!=="none")?"block":"none"; },500);
+  $$("footer").style.position="fixed";
+  // താഴത്തെ വിശദീകരണം: പേര് ഒഴികെ ക്ലോസ് / 30 സെക്കൻഡിൽ മറയും
+  const fx=$$("ftExtra"), fb=document.createElement("button"); fb.id="ftx"; fb.textContent="✕"; $$("footer").appendChild(fb);
+  const hideF=()=>{ fx.style.display="none"; fb.style.display="none"; try{setFH()}catch{} };
+  fb.onclick=hideF; setTimeout(hideF,30000);
+  // കൂടുതൽ വിവരങ്ങൾ ബട്ടൺ അമർത്തുമ്പോൾ വീണ്ടും കാണിക്കാനും, "?" ബട്ടൺ
+  const q=document.createElement("button"); q.textContent="?"; q.title="ഉപയോഗിക്കുന്ന വിധം"; q.style.cssText="position:fixed;right:10px;top:10px;z-index:25;padding:4px 10px";
+  q.onclick=()=>{ w.style.display="flex"; }; document.body.appendChild(q);
+})();
+
+// ===== patch15: ഗ്ലോസ്സറി — ഷീറ്റിൽ B="GLOSS" വരികൾ: C=English, D=ഇപ്പോഴത്തെ വാക്ക്, E=പുതിയ വാക്ക് =====
+let GLOSS=[]; const _gc=new Map(), _go=new WeakMap();
+const G=t=>{ if(!GLOSS.length||typeof t!=="string"||!t) return t; let r=_gc.get(t); if(r===undefined){ r=t; for(const [a,b] of GLOSS) if(r.includes(a)) r=r.split(a).join(b); _gc.set(t,r); } return r; };
+function gNode(n){ const v=n.nodeValue, rec=_go.get(n), src=(rec&&rec.out===v)?rec.orig:v, r=G(src); _go.set(n,{orig:src,out:r}); if(r!==v) n.nodeValue=r; }
+function gTree(root){ const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT); let n; while((n=w.nextNode())){ if(/^(SCRIPT|STYLE)$/.test(n.parentNode.nodeName)) continue; gNode(n); } }
+["fillText","strokeText","measureText"].forEach(k=>{ const f=CanvasRenderingContext2D.prototype[k]; CanvasRenderingContext2D.prototype[k]=function(t,...a){ return f.call(this,G(t),...a); }; });
+new MutationObserver(ms=>{ if(!GLOSS.length) return; ms.forEach(m=>{ if(m.type==="characterData") gNode(m.target); else m.addedNodes.forEach(n=>{ if(n.nodeType===3) gNode(n); else if(n.nodeType===1) gTree(n); }); }); }).observe(document.body,{childList:true,subtree:true,characterData:true});
+function sendGloss(){ const f=document.getElementById("infoFrame"); if(f&&f.contentWindow) f.contentWindow.postMessage({type:"aa-gloss",gloss:GLOSS},"*"); }
+window.addEventListener("message",e=>{ if(e.data&&e.data.type==="aa-ready") sendGloss(); });
+function setGloss(g){ GLOSS=g.sort((x,y)=>y[0].length-x[0].length); _gc.clear(); gTree(document.body); needs=true; sendGloss(); }
+function applyGloss(rows){
+  const g=rows.filter(r=>(r[1]||"").trim().toUpperCase()==="GLOSS"&&(r[3]||"").trim()&&(r[4]||"").trim()).map(r=>[r[3].trim(),r[4].trim()]);
+  try{ localStorage.setItem("aa_gloss",JSON.stringify(g)); }catch{}
+  setGloss(g);
+}
+try{ const g=JSON.parse(localStorage.getItem("aa_gloss")||"[]"); if(g.length) setGloss(g); }catch{}
 </script>
 </body>
 </html>
