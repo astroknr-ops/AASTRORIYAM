@@ -752,6 +752,10 @@ renderChecklist();
 if(window.innerWidth<700){ $("drawer").classList.add("hidden"); $("toggleDrawerBtn").classList.remove("active"); }
 $("statusText").textContent=`${cons.length} കോൺസ്റ്റലേഷൻ • ${STARS.length} നക്ഷത്രം • ${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E`;
 try{ const u=LIVE_CSV||DEFAULT_CSV||localStorage.getItem("nl_csv"); if(u){$("csvInput").value=u;loadFromCSV(u)} }catch{}
+// ഓട്ടോ റിഫ്രഷ്: ഓരോ 2 മിനിറ്റിലും, ടാബ് വീണ്ടും തുറക്കുമ്പോഴും ഷീറ്റ് വീണ്ടും വായിക്കും
+(function(){ let last=Date.now(); const re=()=>{ if(document.hidden||!LIVE_CSV) return; last=Date.now(); loadFromCSV(LIVE_CSV); };
+  setInterval(re,120000);
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&Date.now()-last>15000) re(); }); })();
 requestAnimationFrame(frame);
 $("menuBtn").onclick=()=>{ const t=$("toolbar"); t.classList.toggle("hide"); $("menuBtn").textContent=t.classList.contains("hide")?"☰":"✕"; };
 $("toggleCsvBtn").onclick=function(){ const c=$("csvBar"); c.classList.toggle("hide"); this.classList.toggle("active",!c.classList.contains("hide")); };
@@ -966,8 +970,16 @@ showInfo=function(c){ _si(c); setStoryBtn((c.story||c.infoText)?{story:c.story,t
 showBody=function(b){ _sb(b); setStoryBtn(storyFor([b.key,b.ml])); };
 showNakInfo=function(n){ _sn(n); setStoryBtn(storyFor([n[0]])); };
 function fmtStory(t){
-  return escS(t).split(/\n{2,}/).map(p=>{ const im=p.trim().match(/^(https?:\/\/\S+\.(?:png|jpe?g|webp|gif))$/i);
-    return im?`<img src="${im[1]}" style="max-width:100%;border-radius:8px;margin:6px 0">`:`<p>${p.replace(/\n/g,"<br>")}</p>`; }).join("");
+  return escS(t).split(/\n{2,}/).map(p=>{ const u=p.trim(); let m;
+    if(/^https?:\/\/\S+\.(?:png|jpe?g|webp|gif)$/i.test(u)||/^https?:\/\/(?:drive\.google\.com\/thumbnail|lh3\.googleusercontent\.com\/)\S+$/i.test(u))
+      return `<img src="${u}" loading="lazy" style="max-width:100%;border-radius:8px;margin:6px 0">`;
+    if((m=u.match(/^https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/i)))
+      return `<iframe src="https://www.youtube.com/embed/${m[1]}" allow="accelerometer;encrypted-media;picture-in-picture" allowfullscreen style="width:100%;aspect-ratio:16/9;border:0;border-radius:8px;margin:6px 0"></iframe>`;
+    if((m=u.match(/^https?:\/\/drive\.google\.com\/file\/d\/([\w-]+)/i)))
+      return `<iframe src="https://drive.google.com/file/d/${m[1]}/preview" allowfullscreen style="width:100%;aspect-ratio:16/9;border:0;border-radius:8px;margin:6px 0"></iframe>`;
+    if(/^https?:\/\/\S+\.(?:mp4|webm)$/i.test(u))
+      return `<video src="${u}" controls playsinline preload="metadata" style="width:100%;border-radius:8px;margin:6px 0"></video>`;
+    return `<p>${p.replace(/\n/g,"<br>")}</p>`; }).join("");
 }
 async function openStory(s){
   $("storyTitle").textContent=s.title||"കഥ / വിശദീകരണം"; $("storyPanel").style.display="flex";
