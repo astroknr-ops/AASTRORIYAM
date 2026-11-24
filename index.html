@@ -149,6 +149,8 @@ button,input,select,textarea{font-family:inherit}
 <script>
 /* എല്ലാ ഉപകരണത്തിലും ഷീറ്റ് ഓട്ടോമാറ്റിക് ആയി വായിക്കാൻ: Publish to web → CSV ലിങ്ക് ഇവിടെ ഇടുക */
 const APP_T0=Date.now();
+/* ഉടനടി അപ്‌ഡേറ്റിന്: Apps Script വെബ് ആപ്പ് (/exec) ലിങ്ക് ഇവിടെ ഇടുക. ഒഴിച്ചിട്ടാൽ താഴത്തെ CSV ഉപയോഗിക്കും */
+const LIVE_CSV="https://script.google.com/macros/s/AKfycbxflTrWDOdRXHFzxSpKrt_Z3K3W6Quo392XsO3RDloS5r9KmlyHWnxBveXpwKF_d3G6yQ/exec";
 const DEFAULT_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vTyuCin4l1V4N-1PrKRTR2S2uhLo5ALpqds1WqUTeuqMPM_WldhwMRlhMYgLaPP3kuCcHZntIYnZPrY/pub?output=csv";
 const _rn=Date.now.bind(Date); let TOFF=0; Date.now=()=>_rn()+TOFF;
 // AASTRORIYAM. Constellation line data: d3-celestial by Olaf Frohn, BSD 3-Clause License, Copyright (c) 2015 Olaf Frohn. https://github.com/ofrohn/d3-celestial
@@ -737,10 +739,10 @@ async function loadFromCSV(url){
       const art=(r[7]||"").trim(); if(art&&art!==c.artUrl){c.artUrl=art;loadArt(c)}
       try{const an=(r[10]||"").trim(); if(an) c.anchors=JSON.parse(an)}catch{}
     });
-    buildExtras(rows); normNames(); applyGloss(rows); setNotice(rows,all[0]); try{localStorage.setItem("nl_csv",url)}catch{}
+    buildExtras(rows); normNames(); applyGloss(rows); window.SHEETSRC=(LIVE_CSV&&url===LIVE_CSV)?" • ലൈവ് ലിങ്ക്":" • പ്രസിദ്ധീകരിച്ച CSV"; setNotice(rows,all[0]); try{localStorage.setItem("nl_csv",url)}catch{}
     renderChecklist(); needs=true;
     st.textContent=`CSV അപ്‌ഡേറ്റ് ആയി (${rows.length} വരികൾ)`;
-  }catch(e){ window.SHEETINFO="⚠ ഷീറ്റ് ലോഡ് ആയില്ല: "+(e&&e.message||e); st.textContent="CSV വായിക്കാൻ കഴിഞ്ഞില്ല (ബിൽറ്റ്-ഇൻ ഡാറ്റ ഉപയോഗിക്കുന്നു)"; }
+  }catch(e){ if(LIVE_CSV&&url===LIVE_CSV&&DEFAULT_CSV){ window.SHEETINFO="⚠ ലൈവ് ലിങ്ക് പരാജയപ്പെട്ടു; പ്രസിദ്ധീകരിച്ച CSV ഉപയോഗിക്കുന്നു"; return loadFromCSV(DEFAULT_CSV); } window.SHEETINFO="⚠ ഷീറ്റ് ലോഡ് ആയില്ല: "+(e&&e.message||e); st.textContent="CSV വായിക്കാൻ കഴിഞ്ഞില്ല (ബിൽറ്റ്-ഇൻ ഡാറ്റ ഉപയോഗിക്കുന്നു)"; }
 }
 $("loadCsvBtn").onclick=()=>{ const u=$("csvInput").value.trim(); if(u) loadFromCSV(u); };
 
@@ -749,7 +751,7 @@ resize();
 renderChecklist();
 if(window.innerWidth<700){ $("drawer").classList.add("hidden"); $("toggleDrawerBtn").classList.remove("active"); }
 $("statusText").textContent=`${cons.length} കോൺസ്റ്റലേഷൻ • ${STARS.length} നക്ഷത്രം • ${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E`;
-try{ const u=DEFAULT_CSV||localStorage.getItem("nl_csv"); if(u){$("csvInput").value=u;loadFromCSV(u)} }catch{}
+try{ const u=LIVE_CSV||DEFAULT_CSV||localStorage.getItem("nl_csv"); if(u){$("csvInput").value=u;loadFromCSV(u)} }catch{}
 requestAnimationFrame(frame);
 $("menuBtn").onclick=()=>{ const t=$("toolbar"); t.classList.toggle("hide"); $("menuBtn").textContent=t.classList.contains("hide")?"☰":"✕"; };
 $("toggleCsvBtn").onclick=function(){ const c=$("csvBar"); c.classList.toggle("hide"); this.classList.toggle("active",!c.classList.contains("hide")); };
@@ -1249,7 +1251,7 @@ function setNotice(rows,hdr){
   const hn=(hdr||[]).map(h=>(h||"").toLowerCase().replace(/[\s_\-]/g,"")); let ni=hn.findIndex(h=>["notice","scroll","ticker","todayspecial","announcement"].includes(h)); if(ni<0) ni=14; const li=ni+1;
   let r=null; for(let i=rows.length-1;i>=0;i--){ if((rows[i][ni]||"").trim()){ r=rows[i]; break; } }
   if(location.hash==="#debug") alert("ഷീറ്റ് വരികൾ: "+rows.length+"\nതലക്കെട്ടുകൾ: "+(hdr||[]).join(", ")+"\nNotice കോളം: "+String.fromCharCode(65+ni)+"\nകണ്ടത്: "+(r?r[ni].slice(0,60):"ഒന്നുമില്ല"));
-  window.SHEETINFO="ഷീറ്റ്: "+rows.length+" വരികൾ • അറിയിപ്പ്: "+(r?"ഉണ്ട്":"ഇല്ല")+" • കോളം "+String.fromCharCode(65+ni);
+  window.SHEETINFO="ഷീറ്റ്: "+rows.length+" വരികൾ • അറിയിപ്പ്: "+(r?"ഉണ്ട്":"ഇല്ല")+" • കോളം "+String.fromCharCode(65+ni)+(window.SHEETSRC||"");
   if(!r||tkClosed){ tk.style.display="none"; setFH(); return; }
   const tx=r[ni].trim().replace(/\s+/g," "), ln=(r[li]||"").trim(), inn=document.getElementById("tkIn");
   inn.textContent=tx+(ln?"   ➜   ":""); tk.dataset.link=ln;
