@@ -1202,8 +1202,8 @@ function calHTML(y,m){
   const hideF=()=>{ fx.style.display="none"; fb.style.display="none"; try{setFH()}catch{} };
   fb.onclick=hideF; setTimeout(hideF,30000);
   // കൂടുതൽ വിവരങ്ങൾ ബട്ടൺ അമർത്തുമ്പോൾ വീണ്ടും കാണിക്കാനും, "?" ബട്ടൺ
-  const q=document.createElement("button"); q.textContent="?"; q.title="ഉപയോഗിക്കുന്ന വിധം"; q.style.cssText="position:fixed;right:10px;top:10px;z-index:25;padding:4px 10px";
-  q.onclick=()=>{ w.style.display="flex"; }; document.body.appendChild(q);
+  const q=document.createElement("button"); q.id="helpBtn"; q.textContent="❓"; q.title="സഹായം";
+  q.onclick=()=>{ w.style.display="flex"; }; $$("toolbar").appendChild(q);
 })();
 
 // ===== patch15: ഗ്ലോസ്സറി — ഷീറ്റിൽ B="GLOSS" വരികൾ: C=English, D=ഇപ്പോഴത്തെ വാക്ക്, E=പുതിയ വാക്ക് =====
