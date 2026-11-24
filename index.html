@@ -92,6 +92,10 @@ html.night{filter:sepia(1) saturate(4) hue-rotate(-40deg) brightness(.8)}
 button,input,select,textarea{font-family:inherit}
 .footer .tag{font-size:11px;color:var(--text);margin-top:1px}
 .info-card{left:66px;max-width:min(360px,calc(100vw - 80px));max-height:48vh;overflow-y:auto}
+.xclose{position:absolute;top:6px;right:8px;padding:2px 9px;font-size:12px;z-index:3}
+.pan table.cal{font-size:11px}.pan table.cal td{padding:3px 3px;vertical-align:top}
+.pan tr.today{background:rgba(56,189,248,.18)}.pan tr.sp td{color:#fbbf24}
+.pan .sec{margin-top:8px;color:var(--accent2);font-weight:700}
 </style>
 </head>
 <body>
@@ -511,7 +515,7 @@ function showNakInfo(n){
 
 function draw(){
   setView();
-  const lst=getLST(); skyF=calcSkyF(lst);
+  const lst=getLST(); skyF=calcSkyF(lst); FOCUS=pickFocus(lst);
   ctx.clearRect(0,0,W,H);
   const g=ctx.createRadialGradient(W/2,H/2,40,W/2,H/2,Math.max(W,H)*.75);
   g.addColorStop(0,mixc("#0b152b","#6f93c8",skyF)); g.addColorStop(1,mixc("#040711","#2f5d9e",skyF));
@@ -537,10 +541,10 @@ function draw(){
   for(const c of cons){
     c.sx=null;
     if(!c.checked) continue;
-    const col=c.zodiac?"251,191,36":"56,189,248";
+    const col="56,189,248";
     const cs=toScr(c.ra,c.dec,lst,-15);
     if(cs){c.sx=cs.x;c.sy=cs.y}
-    if(showArt&&c.img) drawArt(c,lst);
+    if(showArt&&c.img&&(SET.artAll||c===FOCUS)) drawArt(c,lst);
     if(showLines){
       ctx.strokeStyle=`rgba(${col},.7)`; ctx.lineWidth=1.4;
       for(const poly of c.lines){
@@ -560,7 +564,7 @@ function draw(){
     }
   }
 
-  drawGround(lst); drawExtras(lst); drawHUD(lst);
+  drawIndian(lst); drawDSO(lst); drawGround(lst); drawExtras(lst); drawHUD(lst);
   ctx.font="bold 12px 'Noto Sans Malayalam',system-ui,sans-serif"; ctx.textAlign="center";
   ctx.fillStyle="rgba(56,189,248,.9)";
   [["വടക്ക് (N)",0],["കിഴക്ക് (E)",90],["തെക്ക് (S)",180],["പടിഞ്ഞാറ് (W)",270]].forEach(([t,a])=>{
@@ -648,6 +652,7 @@ function tap(x,y){
   cons.forEach(c=>chk(c,showInfo,12));
   if(showNak) NAK.forEach(n=>chk(n,showNakInfo));
   if(showBodies) bodies.forEach(b=>chk(b,showBody));
+  if(MESS&&SET.mess!==false) MESS.forEach(o=>chk(o,showMessier));
   if(best) fn(best);
 }
 
@@ -1031,6 +1036,144 @@ fetch("art/art.json").then(r=>r.ok?r.json():null).then(j=>{
   if(!j) return;
   cons.forEach(c=>{ const e=j[c.abbr]; if(!e||c.artUrl) return; c.artUrl=e.file; c.anchors=e.anchors||null; loadArt(c); });
 }).catch(()=>{});
+// ===== patch13: ഫോക്കസ് ചിത്രം, ഇന്ത്യൻ/IAU വരകൾ, മെസ്സിയർ, ഇന്ന് രാത്രി, കലണ്ടർ, ✕ ബട്ടണുകൾ =====
+let FOCUS=null, PIN=null, PINT=0, MESS=null, INDIAN=null;
+function pickFocus(lst){
+  if(PIN&&Date.now()-PINT<12000){ const c=cons.find(x=>x.abbr===PIN); if(c&&c.img) return c; }
+  let best=null, bd=1e9; const cx=W/2, cy=H/2;
+  for(const c of cons){ if(!c.checked||!c.img) continue; const p=toScr(c.ra,c.dec,lst,-5); if(!p) continue; const d=Math.hypot(p.x-cx,p.y-cy); if(d<bd){bd=d;best=c;} }
+  return bd<Math.min(W,H)*0.55?best:null;
+}
+const _si4=showInfo; showInfo=function(c){ _si4(c); PIN=c.abbr; PINT=Date.now(); needs=true; };
+fetch("stars.json").then(r=>r.json()).then(a=>{ if(Array.isArray(a)&&a.length>1500){ STARS.length=0; a.forEach(s=>STARS.push(s)); needs=true; } }).catch(()=>{});
+fetch("messier.json").then(r=>r.json()).then(a=>{ if(Array.isArray(a)&&a.length){ MESS=a; needs=true; } }).catch(()=>{});
+fetch("indian.json").then(r=>r.json()).then(a=>{ if(Array.isArray(a)&&a.length){ INDIAN=a; needs=true; } }).catch(()=>{});
+function drawIndian(lst){
+  if(!INDIAN||SET.ind===false) return;
+  ctx.strokeStyle="rgba(251,146,60,.85)"; ctx.lineWidth=1.7;
+  for(const f of INDIAN) for(const poly of f.l){ ctx.beginPath(); let on=false;
+    for(const q of poly){ const p=toScr(q[0],q[1],lst,-5); if(!p){on=false;continue} on?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y); on=true; } ctx.stroke(); }
+  if(showLabels){ ctx.font=`600 ${Math.max(10,SET.lab-1)}px 'Noto Sans Malayalam',system-ui,sans-serif`; ctx.fillStyle="#fdba74"; ctx.textAlign="center";
+    for(const f of INDIAN){ const p=toScr(f.c[0],f.c[1],lst,-5); if(p) ctx.fillText(f.n,p.x,p.y+14); } }
+}
+const MT=t=>t==="gc"?"ഗോളീയ താരവ്യൂഹം":(t==="oc"||t==="ocl"||t==="as")?"ഓപ്പൺ താരവ്യൂഹം":t==="pn"?"ഗ്രഹ നീഹാരിക":(t==="snr"||t==="sn")?"സൂപ്പർനോവ അവശിഷ്ടം":/^g/.test(t||"")?"ഗാലക്സി":"നീഹാരിക / മറ്റുള്ളവ";
+const MCOL=t=>t==="gc"?"#a7f3d0":(t==="oc"||t==="ocl"||t==="as")?"#fde68a":/^g/.test(t||"")?"#fda4af":"#93c5fd";
+function drawDSO(lst){
+  if(!MESS||SET.mess===false) return;
+  const lim=fov>60?6:fov>30?8:11, r=Math.min(12,3+1.3*Math.pow(75/fov,.8));
+  ctx.lineWidth=1.3; ctx.font="10px system-ui"; ctx.textAlign="center";
+  for(const o of MESS){ o.sx=null; if(o.mag>lim) continue; const p=toScr(o.ra,o.dec,lst,-2); if(!p) continue; o.sx=p.x; o.sy=p.y;
+    ctx.strokeStyle=MCOL(o.t); ctx.beginPath();
+    if(/^g/.test(o.t)&&o.t!=="gc") ctx.ellipse(p.x,p.y,r*1.4,r*.7,-.5,0,6.283); else ctx.arc(p.x,p.y,r,0,6.283);
+    ctx.stroke(); if(showLabels&&(fov<50||o.mag<=5)){ ctx.fillStyle=MCOL(o.t); ctx.fillText(o.id,p.x,p.y-r-3); } }
+}
+const MNOTE={M1:"ഞണ്ട് നീഹാരിക (ഇടവം): 1054-ൽ ചൈനീസ് ജ്യോതിശാസ്ത്രജ്ഞർ കണ്ട സൂപ്പർനോവയുടെ അവശിഷ്ടം. ഏകദേശം 6,500 പ്രകാശവർഷം അകലെ.",
+ M13:"ഹെർക്കുലീസിലെ ഗോളീയ താരവ്യൂഹം: ലക്ഷക്കണക്കിന് നക്ഷത്രങ്ങൾ. ഏകദേശം 22,000 പ്രകാശവർഷം അകലെ.",
+ M31:"ആൻഡ്രോമിഡ ഗാലക്സി: നമ്മുടെ ഏറ്റവും അടുത്ത വലിയ ഗാലക്സി, ഏകദേശം 25 ലക്ഷം പ്രകാശവർഷം അകലെ. ഇരുണ്ട ആകാശത്ത് കണ്ണുകൊണ്ട് കാണാം.",
+ M33:"ത്രികോണ ഗാലക്സി: ഏകദേശം 27 ലക്ഷം പ്രകാശവർഷം അകലെ. വളരെ ഇരുണ്ട ആകാശത്ത് മാത്രം കാണാം.",
+ M42:"ഒറയോൺ നീഹാരിക: വേട്ടക്കാരന്റെ വാളിൽ. ഏകദേശം 1,300 പ്രകാശവർഷം അകലെ; പുതിയ നക്ഷത്രങ്ങൾ ജനിക്കുന്ന സ്ഥലം.",
+ M45:"കാർത്തിക (Pleiades): ഇടവം രാശിയിലെ നക്ഷത്രക്കൂട്ടം, ഏകദേശം 440 പ്രകാശവർഷം അകലെ. ഇന്ത്യൻ പാരമ്പര്യത്തിലെ കാർത്തിക നക്ഷത്രം.",
+ M44:"പ്രേസെപെ / Beehive: കർക്കടകത്തിലെ ഓപ്പൺ താരവ്യൂഹം, പൂയം നക്ഷത്രത്തിന് സമീപം. കണ്ണുകൊണ്ട് മങ്ങിയ മേഘം പോലെ കാണാം.",
+ M57:"വളയ നീഹാരിക (Ring Nebula): ലൈറ രാശിയിലെ ഗ്രഹ നീഹാരിക. ദൂരദർശിനിയിൽ വളയം പോലെ കാണാം.",
+ M27:"ഡംബെൽ നീഹാരിക: വൾപെക്കുലയിലെ ഗ്രഹ നീഹാരിക.",
+ M8:"ലഗൂൺ നീഹാരിക: ധനു രാശിയിലെ വലിയ നീഹാരിക.",
+ M20:"ട്രിഫിഡ് നീഹാരിക: ധനു രാശിയിൽ.",
+ M51:"വേൾപൂൾ ഗാലക്സി: വേട്ടനായ്ക്കൾ (Canes Venatici) രാശിയിലെ സർപ്പിള ഗാലക്സി.",
+ M81:"ബോഡ്സ് ഗാലക്സി: സപ്തർഷി (Ursa Major) രാശിയിൽ.",
+ M82:"സിഗാർ ഗാലക്സി: M81-ന് അടുത്ത്, സപ്തർഷി രാശിയിൽ.",
+ M87:"കന്നി രാശിയിലെ ഭീമൻ ദീർഘവൃത്ത ഗാലക്സി. ആദ്യമായി തമോഗർത്തത്തിന്റെ ചിത്രം (2019) എടുത്തത് ഇതിലാണ്.",
+ M104:"സോംബ്രെറോ ഗാലക്സി: കന്നി രാശിയിൽ.",
+ M22:"ധനു രാശിയിലെ ശോഭയുള്ള ഗോളീയ താരവ്യൂഹം.",
+ M7:"ടോളമിയുടെ താരവ്യൂഹം: വൃശ്ചികത്തിലെ വാലിനടുത്ത്, കണ്ണുകൊണ്ട് കാണാം.",
+ M6:"ശലഭ താരവ്യൂഹം: വൃശ്ചികത്തിൽ.",
+ M35:"മിഥുനത്തിലെ ഓപ്പൺ താരവ്യൂഹം."};
+function showMessier(o){
+  const [r2,d2]=precess(o.ra,o.dec), [az,al]=horiz(r2,d2,getLST()), alt=al/D, rs=starRS(o.ra,o.dec);
+  $("infoTitle").textContent=`${o.id}${o.n?" • "+o.n:""}`;
+  $("infoSub").innerHTML=`<b>തരം:</b> ${MT(o.t)} • <b>തെളിച്ചം:</b> ${o.mag}`;
+  $("infoNak").innerHTML=""; 
+  $("infoStars").innerHTML=`<b>ഇപ്പോൾ:</b> ${alt>0?`${alt.toFixed(0)}° ഉയരം, ${DN[Math.round(az/D/45)%8]}`:"ചക്രവാളത്തിന് താഴെ"}<br><b>ഉദയം:</b> ${fmt(rs.rise)} • <b>അസ്തമയം:</b> ${fmt(rs.set)}`;
+  $("infoCoords").innerHTML=`<b>RA / Dec:</b> ${o.ra.toFixed(2)}h, ${o.dec.toFixed(1)}°`;
+  $("infoCard").classList.add("show");
+  const ex=EXTRA[o.id]||EXTRA[o.id.toUpperCase()];
+  setStoryBtn(ex&&ex.story?ex:null);
+  if(MNOTE[o.id]) $("infoStory").insertAdjacentHTML("afterbegin",`<div style="margin-top:6px;color:#e2e8f0">${escS(MNOTE[o.id])}</div>`);
+  addCardImg((ex&&ex.img)||`messier/${o.id}.jpg`); placeCard();
+}
+// ---- ഇന്ന് രാത്രി ----
+const METEORS=[[1,3,"ക്വാഡ്രാന്റിഡ്സ്",80],[4,22,"ലൈറിഡ്സ്",18],[5,6,"എറ്റ അക്വേറിഡ്സ്",50],[7,30,"ദക്ഷിണ ഡെൽറ്റ അക്വേറിഡ്സ്",25],[8,12,"പെർസിഡ്സ്",100],[10,21,"ഓറിയണിഡ്സ്",20],[11,17,"ലിയോണിഡ്സ്",15],[12,14,"ജെമിനിഡ്സ്",150]];
+const MONM=["ജനുവരി","ഫെബ്രുവരി","മാർച്ച്","ഏപ്രിൽ","മേയ്","ജൂൺ","ജൂലൈ","ഓഗസ്റ്റ്","സെപ്റ്റംബർ","ഒക്ടോബർ","നവംബർ","ഡിസംബർ"];
+const WDM=["ഞായർ","തിങ്കൾ","ചൊവ്വ","ബുധൻ","വ്യാഴം","വെള്ളി","ശനി"];
+function nextMeteorTxt(){
+  const n=new Date(Date.now()), t=new Date(n.getFullYear(),n.getMonth(),n.getDate()); let best=null;
+  for(const y of [t.getFullYear(),t.getFullYear()+1]) for(const [mo,da,nm,z] of METEORS){ const d=new Date(y,mo-1,da); if(d>=t&&(!best||d<best.d)) best={d,nm,z}; }
+  const days=Math.round((best.d-t)/864e5);
+  return `<b>${best.nm}</b> — ${MONM[best.d.getMonth()]} ${best.d.getDate()}${days?` (${days} ദിവസം കഴിഞ്ഞ്)`:" (ഇന്ന്)"}, മണിക്കൂറിൽ ഏകദേശം ${best.z}`;
+}
+function darkTimes(){
+  const d0=dayStartMs()+12*36e5; let a=null,b=null,prev=null;
+  for(let i=0;i<=288;i++){ const t=d0+i*3e5, s=ephem(t).find(o=>o.key==="sun"), al=horiz(s.ra,s.dec,getLST(t))[1]/D;
+    if(prev!==null){ if(prev>=-18&&al<-18&&a===null) a=t; if(prev<-18&&al>=-18&&a!==null&&b===null) b=t; } prev=al; }
+  return [a,b];
+}
+function tonightHTML(){
+  const now=Date.now(), E=ephem(now), mo=E.find(o=>o.key==="moon"), rs=riseSet(dayStartMs()), g=grahaData(), [da,db]=darkTimes();
+  const d=new Date(now);
+  let h=`<div class="sec">${d.getDate()} ${MONM[d.getMonth()]} ${d.getFullYear()}, ${WDM[d.getDay()]}</div>`;
+  h+=`<div><b>പൂർണ്ണ ഇരുട്ട്:</b> ${da?fmt(da):"—"} മുതൽ ${db?fmt(db):"—"} വരെ</div>`;
+  h+=`<div class="sec">🌙 ചന്ദ്രൻ</div><div>${tithiName(mo.el)} • ${NAK[mo.nak][0]} • ${Math.round(mo.lit*100)}% പ്രകാശം<br>ഉദയം ${fmt(rs.moon.rise)} • അസ്തമയം ${fmt(rs.moon.set)}<br><span style="color:#94a3b8">${mo.lit>.6?"ചന്ദ്രപ്രകാശം കൂടുതൽ: മങ്ങിയ വസ്തുക്കൾ കാണാൻ പ്രയാസം.":"ഇരുണ്ട ആകാശം: മങ്ങിയ വസ്തുക്കൾ കാണാൻ നല്ല സമയം."}</span></div>`;
+  const pl=g.items.filter(i=>["കു","ബു","ഗു","ശു","ശ"].includes(i.n)), vis=pl.filter(i=>i.vis&&i.vis!=="കാണാനാവില്ല"), hid=pl.filter(i=>i.vis==="കാണാനാവില്ല");
+  h+=`<div class="sec">🪐 ഗ്രഹങ്ങൾ</div>`+(vis.length?vis.map(i=>`<div>${i.name}: ${i.vis} (ഉദയം ${i.rise}, അസ്തമയം ${i.set})</div>`).join(""):"<div>ഇന്ന് കാണാവുന്ന ഗ്രഹങ്ങൾ ഇല്ല.</div>")+(hid.length?`<div style="color:#94a3b8">കാണാനാവാത്തവ: ${hid.map(i=>i.name).join(", ")}</div>`:"");
+  const lst=getLST(now), up=[];
+  for(const c of cons){ if(!KEY.has(c.abbr)) continue; const [r2,d2]=precess(c.ra,c.dec), [az,al]=horiz(r2,d2,lst); if(al/D>30) up.push([al/D,az,c]); }
+  up.sort((x,y)=>y[0]-x[0]);
+  h+=`<div class="sec">✦ ഇപ്പോൾ ആകാശത്ത് ഉയരത്തിൽ</div>`+(up.length?up.slice(0,6).map(u=>`<div>${u[2].label} — ${u[0].toFixed(0)}°, ${DN[Math.round(u[1]/D/45)%8]}</div>`).join(""):"<div>—</div>");
+  if(MESS){ const ms=[]; for(const o of MESS){ if(o.mag>6.5) continue; const [r2,d2]=precess(o.ra,o.dec), al=horiz(r2,d2,lst)[1]/D; if(al>25) ms.push([o.mag,o]); } ms.sort((x,y)=>x[0]-y[0]);
+    if(ms.length) h+=`<div class="sec">✧ മെസ്സിയർ (കാണാൻ നല്ലത്)</div>`+ms.slice(0,5).map(x=>`<div>${x[1].id} ${x[1].n||""} (തെളിച്ചം ${x[1].mag})</div>`).join(""); }
+  h+=`<div class="sec">☄ അടുത്ത ഉൽക്കാവർഷം</div><div>${nextMeteorTxt()}</div>`;
+  return h;
+}
+// ---- മാസ കലണ്ടർ: തിഥി, നക്ഷത്രം (രാവിലെ 6 മണിക്ക്, അവസാന സമയം സഹിതം) ----
+let calY=null, calM=null;
+const tShort=el=>{ const i=Math.floor(el/12); return i===14?"പൗർണ്ണമി":i===29?"അമാവാസി":(i<15?"ശു ":"കൃ ")+TN[i%15]; };
+const hm=(e,day)=>fmt(e)+(new Date(e).getDate()!==day?" (+1)":"");
+function calHTML(y,m){
+  const n=new Date(y,m+1,0).getDate(), td=new Date(Date.now());
+  let h=`<table class="cal"><tr><td>തീയതി</td><td>തിഥി (വരെ)</td><td>നക്ഷത്രം (വരെ)</td></tr>`;
+  for(let d=1;d<=n;d++){
+    const ms=new Date(y,m,d,6,0,0).getTime(), mo=moonOf(ms), te=tithiEnd(ms), ne=nakEnd(ms), ts=tShort(mo.el);
+    const today=(td.getFullYear()===y&&td.getMonth()===m&&td.getDate()===d), sp=/പൗർണ്ണമി|അമാവാസി|ഏകാദശി/.test(ts);
+    h+=`<tr class="${today?"today":""} ${sp?"sp":""}"><td>${d} ${WDM[new Date(y,m,d).getDay()].slice(0,2)}</td><td>${ts}<br><span style="color:#94a3b8">${hm(te,d)}</span></td><td>${NAK[mo.nak][0]}<br><span style="color:#94a3b8">${hm(ne,d)}</span></td></tr>`; }
+  return h+`</table><div style="color:#94a3b8;font-size:10px">രാവിലെ 6 മണിയിലെ നിലയാണ്; ഏകദേശ കണക്ക്.</div>`;
+}
+// ---- പാനലുകൾ, ✕ ബട്ടണുകൾ, റെയിൽ ബട്ടണുകൾ ----
+(function(){
+  const GROUP=[["setPanel","toggleSetBtn"],["searchPanel","searchBtn"],["timePanel","timeBtn"],["tonightPanel","tonightBtn"],["calPanel","calBtn"]];
+  const addClose=(el,btn)=>{ if(!el||el.querySelector(".xclose")) return; const b=document.createElement("button"); b.className="xclose"; b.textContent="✕";
+    b.onclick=()=>{ el.classList.remove("show"); if(btn&&$(btn)) $(btn).classList.remove("active"); }; el.insertBefore(b,el.firstChild); };
+  const mkPanel=id=>{ const p=document.createElement("div"); p.className="pan"; p.id=id; document.body.appendChild(p); return p; };
+  const tb=$("toolbar");
+  const mkBtn=(id,ic,title)=>{ const b=document.createElement("button"); b.id=id; b.textContent=ic; b.title=title; tb.insertBefore(b,tb.firstChild); return b; };
+  const tp=mkPanel("tonightPanel"), cp=mkPanel("calPanel");
+  const openOnly=(id,btn)=>{ GROUP.forEach(([p,b])=>{ if(p!==id){ const e=$(p); if(e) e.classList.remove("show"); if($(b)) $(b).classList.remove("active"); } });
+    const e=$(id); e.classList.toggle("show"); $(btn).classList.toggle("active",e.classList.contains("show")); return e.classList.contains("show"); };
+  const renderCal=()=>{ cp.innerHTML=`<h3>🗓 ${MONM[calM]} ${calY}</h3><div style="display:flex;gap:6px;margin:4px 0"><button id="calPrev">◀</button><button id="calNow">ഈ മാസം</button><button id="calNext">▶</button></div>`+calHTML(calY,calM); addClose(cp,"calBtn");
+    $("calPrev").onclick=()=>{ calM--; if(calM<0){calM=11;calY--;} renderCal(); }; $("calNext").onclick=()=>{ calM++; if(calM>11){calM=0;calY++;} renderCal(); };
+    $("calNow").onclick=()=>{ const n=new Date(Date.now()); calY=n.getFullYear(); calM=n.getMonth(); renderCal(); }; };
+  const bi=mkBtn("toggleIndBtn","🕉","ഇന്ത്യൻ വരകൾ"), bc=mkBtn("calBtn","🗓","മാസ കലണ്ടർ"), bt=mkBtn("tonightBtn","🔭","ഇന്ന് രാത്രി");
+  bi.classList.toggle("active",SET.ind!==false);
+  bi.onclick=()=>{ SET.ind=SET.ind===false; saveSet(); bi.classList.toggle("active",SET.ind!==false); if($("cInd")) $("cInd").checked=SET.ind!==false; needs=true; toast("ഇന്ത്യൻ വരകൾ : "+(SET.ind!==false?"ഓൺ":"ഓഫ്")); };
+  bt.onclick=()=>{ if(openOnly("tonightPanel","tonightBtn")){ tp.innerHTML=`<h3>🔭 ഇന്ന് രാത്രി</h3>`+tonightHTML(); addClose(tp,"tonightBtn"); } };
+  bc.onclick=()=>{ if(openOnly("calPanel","calBtn")){ const n=new Date(Date.now()); if(calY===null){calY=n.getFullYear();calM=n.getMonth();} renderCal(); } };
+  // മറ്റ് പാനലുകൾ തുറക്കുമ്പോൾ പുതിയവ അടയ്ക്കുക
+  ["toggleSetBtn","searchBtn","timeBtn"].forEach(id=>{ const b=$(id), o=b.onclick; b.onclick=function(e){ ["tonightPanel","calPanel"].forEach((p,i)=>{ $(p).classList.remove("show"); $(["tonightBtn","calBtn"][i]).classList.remove("active"); }); return o.call(this,e); }; });
+  GROUP.forEach(([p,b])=>addClose($(p),b));
+  const ip=$("infoPanel"); if(ip&&!ip.querySelector(".xclose")){ const b=document.createElement("button"); b.className="xclose"; b.textContent="✕"; b.onclick=()=>openInfo(false); ip.appendChild(b); }
+  const setp=$("setPanel");
+  if(setp){ const mk=(id,txt,key,def)=>{ const l=document.createElement("label"); l.innerHTML=`<input type="checkbox" id="${id}">${txt}`; setp.appendChild(l); const el=$(id); el.checked=def?SET[key]!==false:!!SET[key]; el.onchange=()=>{ SET[key]=el.checked; saveSet(); needs=true; if(key==="ind") bi.classList.toggle("active",el.checked); }; };
+    mk("cInd","ഇന്ത്യൻ നക്ഷത്ര വരകൾ (ഓറഞ്ച്)","ind",true); mk("cMess","മെസ്സിയർ വസ്തുക്കൾ","mess",true); mk("cArtAll","എല്ലാ രാശി ചിത്രങ്ങളും ഒരുമിച്ച് (സാധാരണ: ഫോക്കസിലുള്ളത് മാത്രം)","artAll",false);
+    const lg=document.createElement("div"); lg.style.cssText="margin-top:8px;font-size:11px;color:#94a3b8"; lg.innerHTML='<span style="color:#38bdf8">▬▬</span> IAU രാശി വരകൾ &nbsp; <span style="color:#fb923c">▬▬</span> ഇന്ത്യൻ രൂപങ്ങൾ'; setp.appendChild(lg); }
+})();
 </script>
 </body>
 </html>
