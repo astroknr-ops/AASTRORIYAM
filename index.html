@@ -727,7 +727,7 @@ async function loadFromCSV(url){
   const st=$("statusText");
   try{
     st.textContent="CSV ലോഡ് ചെയ്യുന്നു...";
-    const all=parseCSV(await (await fetch(url+(url.includes("?")?"&":"?")+"_="+Date.now())).text()), rows=all.slice(1);
+    const all=parseCSV(await (await fetch(url+(url.includes("?")?"&":"?")+"_="+Date.now(),{cache:"no-store"})).text()), rows=all.slice(1);
     const map=new Map(rows.filter(r=>r[1]).map(r=>[r[1].trim().toUpperCase(),r]));
     cons.forEach(c=>{
       const r=map.get(c.abbr); if(!r) return;
@@ -758,6 +758,13 @@ $("toggleCsvBtn").onclick=function(){ const c=$("csvBar"); c.classList.toggle("h
 $("togglePanBtn").onclick=()=>{ wantPan=true; saveInfo(); openInfo(true); pushInfo(); };
 $("moreBtn").onclick=()=>openInfo(!infoOpen);
 setInterval(pushInfo,1000);
+/* ഷീറ്റ് ഓട്ടോ-റിഫ്രഷ്: ഷീറ്റിൽ അറിയിപ്പ് ഡിലീറ്റ് ചെയ്താൽ പേജ് തുറന്നിരിക്കുമ്പോഴും സ്ക്രോൾ നിൽക്കും */
+(function(){
+  const src=()=>LIVE_CSV||DEFAULT_CSV; let busy=false, last=Date.now();
+  const refresh=async()=>{ if(busy||!src()||document.visibilityState!=="visible") return; busy=true; last=Date.now(); try{ await loadFromCSV(src()); }catch{} busy=false; };
+  setInterval(refresh,60000);
+  document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"&&Date.now()-last>15000) refresh(); });
+})();
 const FULLPREF=()=>{ try{ return localStorage.getItem("aa_full")!=="0"; }catch{ return true; } };
 function goFull(){ const el=document.documentElement; try{ if(!document.fullscreenElement&&el.requestFullscreen) el.requestFullscreen({navigationUI:"hide"}).catch(()=>{}); }catch{} }
 $("toggleFullBtn").onclick=function(){ try{ if(document.fullscreenElement){ document.exitFullscreen(); localStorage.setItem("aa_full","0"); } else { goFull(); localStorage.setItem("aa_full","1"); } }catch{} };
