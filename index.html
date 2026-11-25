@@ -739,7 +739,7 @@ async function loadFromCSV(url){
       const art=(r[7]||"").trim(); if(art&&art!==c.artUrl){c.artUrl=art;loadArt(c)}
       try{const an=(r[10]||"").trim(); if(an) c.anchors=JSON.parse(an)}catch{}
     });
-    buildExtras(rows); normNames(); applyGloss(rows); window.SHEETSRC=(LIVE_CSV&&url===LIVE_CSV)?" • ലൈവ് ലിങ്ക്":" • പ്രസിദ്ധീകരിച്ച CSV"; setNotice(rows,all[0]); try{localStorage.setItem("nl_csv",url)}catch{}
+    buildExtras(rows); normNames(); applyGloss(rows); window.SHEETSRC=(LIVE_CSV&&url===LIVE_CSV)?" • ലൈവ് ലിങ്ക്":" • പ്രസിദ്ധീകരിച്ച CSV"; setNotice(rows,all[0]); setEvents(rows); try{localStorage.setItem("nl_csv",url)}catch{}
     renderChecklist(); needs=true;
     st.textContent=`CSV അപ്‌ഡേറ്റ് ആയി (${rows.length} വരികൾ)`;
   }catch(e){ if(LIVE_CSV&&url===LIVE_CSV&&DEFAULT_CSV){ window.SHEETINFO="⚠ ലൈവ് ലിങ്ക് പരാജയപ്പെട്ടു; പ്രസിദ്ധീകരിച്ച CSV ഉപയോഗിക്കുന്നു"; return loadFromCSV(DEFAULT_CSV); } window.SHEETINFO="⚠ ഷീറ്റ് ലോഡ് ആയില്ല: "+(e&&e.message||e); st.textContent="CSV വായിക്കാൻ കഴിഞ്ഞില്ല (ബിൽറ്റ്-ഇൻ ഡാറ്റ ഉപയോഗിക്കുന്നു)"; }
@@ -752,10 +752,6 @@ renderChecklist();
 if(window.innerWidth<700){ $("drawer").classList.add("hidden"); $("toggleDrawerBtn").classList.remove("active"); }
 $("statusText").textContent=`${cons.length} കോൺസ്റ്റലേഷൻ • ${STARS.length} നക്ഷത്രം • ${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E`;
 try{ const u=LIVE_CSV||DEFAULT_CSV||localStorage.getItem("nl_csv"); if(u){$("csvInput").value=u;loadFromCSV(u)} }catch{}
-// ഓട്ടോ റിഫ്രഷ്: ഓരോ 2 മിനിറ്റിലും, ടാബ് വീണ്ടും തുറക്കുമ്പോഴും ഷീറ്റ് വീണ്ടും വായിക്കും
-(function(){ let last=Date.now(); const re=()=>{ if(document.hidden||!LIVE_CSV) return; last=Date.now(); loadFromCSV(LIVE_CSV); };
-  setInterval(re,120000);
-  document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&Date.now()-last>15000) re(); }); })();
 requestAnimationFrame(frame);
 $("menuBtn").onclick=()=>{ const t=$("toolbar"); t.classList.toggle("hide"); $("menuBtn").textContent=t.classList.contains("hide")?"☰":"✕"; };
 $("toggleCsvBtn").onclick=function(){ const c=$("csvBar"); c.classList.toggle("hide"); this.classList.toggle("active",!c.classList.contains("hide")); };
@@ -966,20 +962,12 @@ function setStoryBtn(s){
   if(s.story) $("storyBtn").onclick=()=>openStory(s);
 }
 const _si=showInfo, _sb=showBody, _sn=showNakInfo;
-showInfo=function(c){ _si(c); setStoryBtn((c.story||c.infoText)?{story:c.story,title:c.storyTitle,text:c.infoText}:storyFor([c.abbr,c.malayalam,c.english])); };
+showInfo=function(c){ _si(c); setStoryBtn((c.story||c.infoText)?{story:c.story,title:c.storyTitle,text:c.infoText}:storyFor([c.abbr,c.malayalam,c.english])); if(c.artUrl) addCardImg(c.artUrl,"",110); };
 showBody=function(b){ _sb(b); setStoryBtn(storyFor([b.key,b.ml])); };
 showNakInfo=function(n){ _sn(n); setStoryBtn(storyFor([n[0]])); };
 function fmtStory(t){
-  return escS(t).split(/\n{2,}/).map(p=>{ const u=p.trim(); let m;
-    if(/^https?:\/\/\S+\.(?:png|jpe?g|webp|gif)$/i.test(u)||/^https?:\/\/(?:drive\.google\.com\/thumbnail|lh3\.googleusercontent\.com\/)\S+$/i.test(u))
-      return `<img src="${u}" loading="lazy" style="max-width:100%;border-radius:8px;margin:6px 0">`;
-    if((m=u.match(/^https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/i)))
-      return `<iframe src="https://www.youtube.com/embed/${m[1]}" allow="accelerometer;encrypted-media;picture-in-picture" allowfullscreen style="width:100%;aspect-ratio:16/9;border:0;border-radius:8px;margin:6px 0"></iframe>`;
-    if((m=u.match(/^https?:\/\/drive\.google\.com\/file\/d\/([\w-]+)/i)))
-      return `<iframe src="https://drive.google.com/file/d/${m[1]}/preview" allowfullscreen style="width:100%;aspect-ratio:16/9;border:0;border-radius:8px;margin:6px 0"></iframe>`;
-    if(/^https?:\/\/\S+\.(?:mp4|webm)$/i.test(u))
-      return `<video src="${u}" controls playsinline preload="metadata" style="width:100%;border-radius:8px;margin:6px 0"></video>`;
-    return `<p>${p.replace(/\n/g,"<br>")}</p>`; }).join("");
+  return escS(t).split(/\n{2,}/).map(p=>{ const im=p.trim().match(/^(https?:\/\/\S+\.(?:png|jpe?g|webp|gif))$/i);
+    return im?`<img src="${im[1]}" style="max-width:100%;border-radius:8px;margin:6px 0">`:`<p>${p.replace(/\n/g,"<br>")}</p>`; }).join("");
 }
 async function openStory(s){
   $("storyTitle").textContent=s.title||"കഥ / വിശദീകരണം"; $("storyPanel").style.display="flex";
@@ -1011,9 +999,9 @@ buildExtras=function(rows){
     const s={story:v,title:(r[12]||"").trim(),img:im};
     [(r[1]||"").trim().toUpperCase(),(r[3]||"").trim()].forEach(k=>{ if(k) EXTRA[k]=s; }); });
 };
-function addCardImg(src,cap){
+function addCardImg(src,cap,w){
   const el=$("infoStory"); if(!el||!src) return;
-  el.insertAdjacentHTML("afterbegin",`<img src="${escS(src)}" alt="" onerror="this.style.display='none'" style="display:block;width:100%;max-width:240px;border-radius:12px;margin:6px 0" onload="this.nextElementSibling&&(this.nextElementSibling.style.display='block')">${cap?`<div style="display:none;font-size:10px;color:#94a3b8;margin-bottom:4px">${cap}</div>`:""}`);
+  el.insertAdjacentHTML("afterbegin",`<img src="${escS(src)}" alt="" onerror="this.style.display='none'" style="display:block;width:100%;max-width:${w||240}px;border-radius:12px;margin:6px 0" onload="this.nextElementSibling&&(this.nextElementSibling.style.display='block')">${cap?`<div style="display:none;font-size:10px;color:#94a3b8;margin-bottom:4px">${cap}</div>`:""}`);
 }
 const nkNo=n=>String(NAK.indexOf(n)+1).padStart(2,"0");
 const _sn2=showNakInfo, _sb2=showBody;
@@ -1207,7 +1195,7 @@ function calHTML(y,m){
   // HUD (ഉയരം/ദിശ/RA/Dec) ക്ലോസ് ബട്ടൺ
   const hx=$$("hudX"), hud=$$("hud");
   hx.onclick=()=>{ SET.hud=false; try{saveSet()}catch{}; const c=$$("cHud"); if(c) c.checked=false; hx.style.display="none"; needs=true; };
-  setInterval(()=>{ hx.style.display=(SET.hud&&hud&&hud.style.display!=="none")?"block":"none"; },500);
+  setInterval(()=>{ hx.style.display=(SET.hud&&hud&&hud.style.display!=="none")?"block":"none"; const t=document.getElementById("ticker"); hx.style.top=((t&&t.style.display==="flex")?t.offsetHeight+2:2)+"px"; },500);
   $$("footer").style.position="fixed";
   // താഴത്തെ വിശദീകരണം: പേര് ഒഴികെ ക്ലോസ് / 30 സെക്കൻഡിൽ മറയും
   const fx=$$("ftExtra"), fb=document.createElement("button"); fb.id="ftx"; fb.textContent="✕"; $$("footer").appendChild(fb);
@@ -1235,15 +1223,60 @@ function applyGloss(rows){
 }
 try{ const g=JSON.parse(localStorage.getItem("aa_gloss")||"[]"); if(g.length) setGloss(g); }catch{}
 
+// ===== patch18: പരിപാടികൾ (ഇന്ന് രാത്രി), പങ്കിടൽ, ഭാഷ മാറ്റം, ഓഫ്‌ലൈൻ =====
+let EVENTS=[], LANGEN=false, GML=[], GEN=[];
+function setEvents(rows){
+  EVENTS=rows.filter(r=>(r[1]||"").trim().toUpperCase()==="EVENT").map(r=>{ const m=(r[2]||"").trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); return m?{d:new Date(+m[1],m[2]-1,+m[3]),t:(r[3]||"").trim(),l:(r[11]||"").trim()}:null; }).filter(e=>e&&e.t).sort((a,b)=>a.d-b.d);
+}
+window.evOpen=i=>{ const e=EVENTS[i]; if(e&&e.l) openStory({story:e.l,title:e.t}); };
+function eventsHTML(){
+  const t0=new Date(); t0.setHours(0,0,0,0);
+  const L=EVENTS.map((e,i)=>[e,i]).filter(([e])=>e.d>=t0&&e.d-t0<=30*864e5);
+  if(!L.length) return "";
+  return `<h3 style="margin-top:10px">📅 വരാനിരിക്കുന്ന പരിപാടികൾ</h3>`+L.map(([e,i])=>`<div style="margin:4px 0"><b>${e.d.getDate()}/${e.d.getMonth()+1}</b> • ${escS(e.t)}${e.l?` <a style="color:var(--accent);text-decoration:underline" onclick="evOpen(${i})">കൂടുതൽ അറിയാൻ</a>`:""}</div>`).join("");
+}
+const _th=tonightHTML; tonightHTML=function(){ return _th()+eventsHTML(); };
+let SHARE=null;
+const _s5=showInfo; showInfo=function(c){ _s5(c); SHARE={t:c.label||c.malayalam,h:"c="+c.abbr}; };
+const _b5=showBody; showBody=function(b){ _b5(b); SHARE={t:bodyLabel(b),h:"b="+b.key}; };
+const _ag=applyGloss; applyGloss=function(rows){
+  _ag(rows); GML=GLOSS.slice();
+  GEN=rows.filter(r=>(r[1]||"").trim().toUpperCase()==="GLOSS"&&(r[3]||"").trim()&&(r[2]||"").trim()&&!(r[2]||"").startsWith("(")).map(r=>[r[3].trim(),r[2].trim()]);
+  try{ localStorage.setItem("aa_gen",JSON.stringify(GEN)); }catch{}
+  if(LANGEN) setGloss(GEN.slice());
+};
+try{ LANGEN=localStorage.getItem("aa_lang")==="en"; if(LANGEN){ GEN=JSON.parse(localStorage.getItem("aa_gen")||"[]"); GML=JSON.parse(localStorage.getItem("aa_gloss")||"[]"); if(GEN.length) setGloss(GEN.slice()); } }catch{}
+(function(){
+  const tb=$("toolbar"), mk=(id,ic,t,f)=>{ const b=document.createElement("button"); b.id=id; b.textContent=ic; b.title=t; b.onclick=f; tb.appendChild(b); };
+  mk("shareBtn","🔗","പങ്കിടുക",()=>{
+    const open=$("infoCard").classList.contains("show")&&SHARE, u=location.href.split("#")[0]+(open?"#"+SHARE.h:""), t=open?SHARE.t:"ആസ്ട്രോറിയം";
+    if(navigator.share) navigator.share({title:t,text:t+" — ആസ്ട്രോറിയം",url:u}).catch(()=>{});
+    else if(navigator.clipboard) navigator.clipboard.writeText(u).then(()=>toast("ലിങ്ക് കോപ്പി ചെയ്തു"));
+    else prompt("ലിങ്ക്",u);
+  });
+  mk("langBtn","🌐","English / മലയാളം",()=>{
+    if(!GEN.length){ toast("ഷീറ്റ് ലോഡ് ആയിട്ടില്ല"); return; }
+    LANGEN=!LANGEN; try{ localStorage.setItem("aa_lang",LANGEN?"en":"ml"); }catch{}
+    setGloss((LANGEN?GEN:GML).slice()); toast(LANGEN?"English":"മലയാളം");
+  });
+  const m=location.hash.match(/^#([cb])=([\w-]+)/);
+  if(m) setTimeout(()=>{
+    if(m[1]==="c"){ const c=cons.find(x=>x.abbr===m[2]); if(c){ c.checked=true; try{renderChecklist();}catch{} goTo(c.ra,c.dec,true); showInfo(c); } }
+    else { const b=bodies.find(x=>x.key===m[2]); if(b){ goTo(b.ra,b.dec,false); showBody(b); } }
+  },1800);
+  if("serviceWorker" in navigator&&location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
+})();
+
 // ===== patch16: ടൂൾബാറിൽ ആദ്യ 30 സെക്കൻഡ് പേരുകൾ =====
 (function(){
   const st=document.createElement("style");
-  st.textContent=".toolbar.lbl{width:auto;align-items:stretch}.toolbar.lbl button{width:auto;height:34px;padding:0 12px;font-size:13px;white-space:nowrap;text-align:left}.stx{margin-top:6px;white-space:normal}";
+  st.textContent=".toolbar.lbl{width:auto;align-items:stretch}.toolbar{justify-content:flex-start}.toolbar.lbl{gap:4px}.toolbar.lbl button{width:auto;height:30px;padding:0 12px;font-size:13px;white-space:nowrap;text-align:left}.stx{margin-top:6px;white-space:normal}";
   document.head.appendChild(st);
   const tb=document.getElementById("toolbar"), orig=new Map();
   tb.querySelectorAll("button").forEach(b=>{ const t=b.textContent.trim(); if(b.title&&b.title!==t){ orig.set(b,b.textContent); b.textContent=t+" "+b.title; } });
   tb.classList.add("lbl");
-  setTimeout(()=>{ orig.forEach((t,b)=>{ b.textContent=t; }); tb.classList.remove("lbl"); },Math.max(1000,30000-(Date.now()-APP_T0)));
+  tb.scrollTop=0;
+  setTimeout(()=>{ orig.forEach((t,b)=>{ b.textContent=t; }); tb.classList.remove("lbl"); tb.scrollTop=0; },Math.max(1000,30000-(Date.now()-APP_T0)));
 })();
 
 // ===== patch17: ഇന്നത്തെ പ്രത്യേകത — സ്ക്രോൾ അറിയിപ്പ് (ഷീറ്റ്: O=Notice, P=Notice_Link; ഏറ്റവും താഴത്തെ O വരി കാണിക്കും) =====
