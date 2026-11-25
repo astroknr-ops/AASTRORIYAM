@@ -1,0 +1,39 @@
+/* ആസ്ട്രോറിയം കഥാ പേജ് — പൊതു ശൈലി (എല്ലാ കഥയ്ക്കും ഒന്ന്) */
+:root{--bg:#0b1224;--ink:#e8ecf8;--gold:#fbbf24;--rose:#f9a8d4;--sky:#7dd3fc;--green:#86efac;--panel:#141d3a;--line:#2a3a6e}
+@font-face{font-family:"NSM";src:local("Noto Sans Malayalam"),url("../fonts/NotoSansMalayalam.woff2") format("woff2");font-display:swap}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font-family:"NSM","Noto Sans Malayalam",system-ui,sans-serif;font-size:1.0625rem;line-height:1.95;padding:0 0 48px}
+#bar{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--sky),var(--gold));z-index:9}
+main{max-width:640px;margin:0 auto;padding:0 18px}
+.tools{display:flex;justify-content:flex-end;gap:6px;padding-top:10px}
+.tools button{font:inherit;font-size:.85rem;line-height:1.2;background:var(--panel);color:var(--sky);border:1px solid var(--line);border-radius:8px;padding:2px 10px}
+h1{font-size:1.9rem;font-weight:800;color:var(--gold);margin:14px 0 4px;line-height:1.4}
+.sub{color:var(--sky);margin:0 0 14px}
+h2{font-size:1.3rem;color:var(--gold);margin:1.6em 0 .3em;padding-left:10px;border-left:4px solid var(--gold);line-height:1.5}
+p{margin:0 0 1em}
+.big{font-size:1.35rem;font-weight:600;line-height:1.7}
+.small{font-size:.85rem;opacity:.8}
+.n1,.a{color:var(--rose);font-weight:600}.n2,.p{color:var(--sky);font-weight:600}
+.n3,.m{color:var(--green);font-weight:600}.n4,.q{color:var(--gold);font-weight:600}
+figure{margin:1em 0}
+figure img,figure svg{display:block;width:100%;height:auto;border-radius:16px}
+figure.lead img,figure.lead svg{box-shadow:0 10px 30px rgba(0,0,0,.45)}
+figcaption{font-size:.8rem;opacity:.75;text-align:center;margin-top:.4em;line-height:1.5}
+.say{border-left:4px solid var(--sky);padding:2px 0 2px 14px;font-weight:600}
+.box,.sky{background:var(--panel);border-radius:14px;padding:14px 18px;margin:1.4em 0}
+.box{border-left:4px solid var(--gold)}
+.sky{border:1px solid var(--line)}.sky .big{color:var(--gold);margin:0 0 .4em}
+ul.chars{list-style:none;padding:0;margin:0 0 1em}ul.chars li{margin:0 0 .6em}
+.media{width:100%;aspect-ratio:16/9;border:0;border-radius:12px;margin:.6em 0}
+audio{width:100%;margin:.4em 0 1em}
+details.reveal{background:var(--panel);border-radius:12px;padding:10px 16px;margin:1em 0}
+details.reveal summary{cursor:pointer;font-weight:600;color:var(--sky)}
+.goto{font:inherit;background:var(--gold);color:#1b1300;border:0;border-radius:99px;padding:8px 18px;font-weight:700}
+.related{display:flex;flex-wrap:wrap;gap:8px;margin:.6em 0 1.4em}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:2px 14px;color:var(--sky);text-decoration:none;font-weight:600}
+.qq{margin:0 0 1.2em}.qq button{display:block;width:100%;text-align:left;font:inherit;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:6px 14px;margin:0 0 6px}
+.qq button.ok{background:#14532d;border-color:#22c55e}.qq button.no{background:#7f1d1d;border-color:#ef4444}
+html.embed .alone{display:none}
+html:not(.embed) .only-embed{display:none}
+html.night body{filter:sepia(1) hue-rotate(-50deg) saturate(4) brightness(.8)}

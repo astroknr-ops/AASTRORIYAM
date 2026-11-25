@@ -975,7 +975,14 @@ async function openStory(s){
   let m;
   if((m=v.match(/docs\.google\.com\/document\/d\/([\w-]+)/))||(m=v.match(/^([\w-]{25,})$/))){
     box.innerHTML=`<iframe class="stf" src="https://docs.google.com/document/d/${m[1]}/pub?embedded=true"></iframe><p><a href="https://docs.google.com/document/d/${m[1]}/pub" target="_blank" rel="noopener">പുതിയ ടാബിൽ തുറക്കുക</a></p>`;
-  } else if(/\.html?$/i.test(v)){ box.innerHTML=`<iframe class="stf" src="${escS(v)}"></iframe>`; }
+  } else if(/\.html?$/i.test(v)){
+    let t=""; try{ t=await (await fetch(v)).text(); }catch{}
+    if(t&&!/<html|<!doctype/i.test(t)){
+      const base=new URL("stories/",location.href).href;
+      box.innerHTML='<iframe class="stf"></iframe>';
+      box.firstChild.srcdoc='<!DOCTYPE html><html lang="ml"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="'+base+'"><link rel="stylesheet" href="story.css"></head><body><div id="bar"></div><main><div class="tools"><button data-fs="-1">A−</button><button data-fs="1">A+</button></div>'+t+'</main><script src="story.js"><\/script></body></html>';
+    } else box.innerHTML=`<iframe class="stf" src="${escS(v)}"></iframe>`;
+  }
   else if(/\.(md|txt)$/i.test(v)){ try{ box.innerHTML=fmtStory(await (await fetch(v)).text()); }catch{ box.innerHTML="<p>ഫയൽ തുറക്കാൻ കഴിഞ്ഞില്ല.</p>"; } }
   else box.innerHTML=fmtStory(v);
 }
@@ -995,8 +1002,8 @@ fetch("art.json").then(r=>r.json()).then(j=>{ cons.forEach(c=>{ const a=j[c.abbr
 // ===== നക്ഷത്രം / ഗ്രഹം വിവര കാർഡിൽ ചിത്രം =====
 buildExtras=function(rows){
   EXTRA={};
-  rows.forEach(r=>{ const v=(r[11]||"").trim(), im=(r[7]||"").trim(); if(!v&&!im) return;
-    const s={story:v,title:(r[12]||"").trim(),img:im};
+  rows.forEach(r=>{ const v=(r[11]||"").trim(), im=(r[7]||"").trim(), tx=(r[13]||"").trim(); if(!v&&!im&&!tx) return;
+    const s={story:v,title:(r[12]||"").trim(),img:im,text:tx};
     [(r[1]||"").trim().toUpperCase(),(r[3]||"").trim()].forEach(k=>{ if(k) EXTRA[k]=s; }); });
 };
 function addCardImg(src,cap,w){
@@ -1306,6 +1313,14 @@ function setNotice(rows,hdr){
 }
 
 setInterval(()=>{ const h=document.getElementById("helpInfo"); if(h) h.textContent=window.SHEETINFO||"ഷീറ്റ്: ലോഡ് ചെയ്യുന്നു..."; },1000);
+window.addEventListener("message",e=>{
+  const d=e.data, f=document.querySelector("#storyBody iframe");
+  if(!d||d.type!=="aa-goto"||!f||e.source!==f.contentWindow) return;
+  $("storyClose").click();
+  if(d.kind==="c"){ const c=cons.find(x=>x.abbr===d.key); if(c){ c.checked=true; try{renderChecklist();}catch{} goTo(c.ra,c.dec,true); showInfo(c); } }
+  else if(d.kind==="b"){ const b=bodies.find(x=>x.key===d.key); if(b){ goTo(b.ra,b.dec,false); showBody(b); } }
+  else if(d.kind==="n"){ const n=NAK[+d.key-1]; if(n){ goTo(n[2],n[3],true); showNakInfo(n); } }
+});
 </script>
 </body>
 </html>

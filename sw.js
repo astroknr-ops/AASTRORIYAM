@@ -1,5 +1,5 @@
-const V="aastr-v1";
-const PRE=["./","index.html","info.html","stars.json","messier.json","indian.json","art.json"];
+const V="aastr-v2";
+const PRE=["./","index.html","info.html","stars.json","messier.json","indian.json","art.json","stories/story.css","stories/story.js"];
 self.addEventListener("install",e=>{ self.skipWaiting(); e.waitUntil(caches.open(V).then(c=>Promise.all(PRE.map(u=>c.add(u).catch(()=>{}))))); });
 self.addEventListener("activate",e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==V).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener("fetch",e=>{

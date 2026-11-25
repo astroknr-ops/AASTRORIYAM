@@ -1,0 +1,52 @@
+<!-- ആസ്ട്രോറിയം കഥ (ഉള്ളടക്കം മാത്രം): ഈ ഫയൽ stories/ ഫോൾഡറിൽ ഇട്ട് ഷീറ്റിലെ L കോളത്തിൽ stories/ഫയലിന്റെപേര്.html എന്ന് ഇടുക. <head>, CSS, script ഒന്നും വേണ്ട — ആപ്പ് തനിയെ ചേർക്കും. ചിത്രങ്ങൾ stories/img/ ൽ. -->
+
+<!-- 1. തലക്കെട്ട് -->
+<h1>തലക്കെട്ട്</h1>
+<p class="sub">ഉപതലക്കെട്ട് (ഒരു വരി)</p>
+
+<!-- 2. മെയിൻ ചിത്രം (ചിത്രങ്ങൾ img/ ഫോൾഡറിൽ, WebP) -->
+<figure class="lead"><img src="img/NAME-main.webp" alt="ചിത്രത്തിന്റെ വിവരണം"></figure>
+
+<!-- ഓഡിയോ വേണമെങ്കിൽ (ഇല്ലെങ്കിൽ ഈ വരി ഒഴിവാക്കുക): <audio controls preload="none" src="audio/NAME.mp3"></audio> -->
+
+<!-- 3. ഖണ്ഡിക 1 -->
+<p>ഖണ്ഡിക 1 ഇവിടെ എഴുതുക.</p>
+
+<!-- 4. ഉപ ചിത്രം 1 -->
+<figure><img loading="lazy" src="img/NAME-1.webp" alt="വിവരണം"><figcaption>അടിക്കുറിപ്പ് (വേണമെങ്കിൽ)</figcaption></figure>
+
+<!-- ഖണ്ഡിക 2, 3 ... പിന്നെ ഉപ ചിത്രം 2, 3 ... ഇതേ രീതിയിൽ ആവർത്തിക്കുക -->
+<p>ഖണ്ഡിക 2 ഇവിടെ.</p>
+<p>ഖണ്ഡിക 3 ഇവിടെ.</p>
+<figure><img loading="lazy" src="img/NAME-2.webp" alt="വിവരണം"></figure>
+
+<h2>ഉപതലക്കെട്ട് (വേണമെങ്കിൽ)</h2>
+<p>ഖണ്ഡിക ...</p>
+
+<div class="box"><p style="margin:0"><b>ഒരു കുഞ്ഞ് രഹസ്യം 🔭</b><br>ശാസ്ത്ര വിവരം ഇവിടെ.</p></div>
+
+<!-- ആപ്പിനുള്ളിൽ തുറക്കുമ്പോൾ മാത്രം കാണുന്ന ഭാഗം. data-goto: c:രാശിയുടെ ചുരുക്കെഴുത്ത് (c:AND) | n:നക്ഷത്രം 1-27 (n:6) | b:ഗ്രഹം (b:mars) -->
+<div class="sky only-embed">
+<p class="big">ഇപ്പോൾ ആകാശത്തേക്ക് നോക്കൂ</p>
+<p>ഈ കഥയിലെ രാശിയെ ആകാശത്ത് കാണാൻ താഴത്തെ ബട്ടൺ അമർത്തൂ.</p>
+<button class="goto" data-goto="c:AND">🔭 ആകാശത്ത് കാണിക്കൂ</button>
+</div>
+
+<!-- ബന്ധപ്പെട്ട കഥകൾ (ഫയലിന്റെ പേര് മാത്രം) -->
+<h2>ഇതോടൊപ്പം വായിക്കാം</h2>
+<nav class="related"><a class="chip" href="perseus.html">പെർസ്യൂസ്</a><a class="chip" href="cassiopeia.html">കാസിയോപ്പിയ</a></nav>
+
+<!-- ക്വിസ്: data-a = ശരിയായ ഉത്തരത്തിന്റെ നമ്പർ (1, 2, 3) -->
+<h2>ചെറിയ ക്വിസ്</h2>
+<div class="qq" data-a="1"><p>ചോദ്യം 1?</p><button>ശരിയായ ഉത്തരം</button><button>തെറ്റ്</button><button>തെറ്റ്</button></div>
+<div class="qq" data-a="2"><p>ചോദ്യം 2?</p><button>തെറ്റ്</button><button>ശരിയായ ഉത്തരം</button><button>തെറ്റ്</button></div>
+
+<!-- ===== ആവശ്യമെങ്കിൽ എടുത്ത് ഉപയോഗിക്കാവുന്ന സ്നിപ്പറ്റുകൾ =====
+കഥാപാത്രത്തിന്റെ പേരിന് നിറം:  <span class="n1">പേര്</span>   (n1 പിങ്ക്, n2 നീല, n3 പച്ച, n4 സ്വർണ്ണം)
+സംഭാഷണം:  <p class="say">"സംഭാഷണം"</p>
+വലിയ വരി:  <p class="big">വലിയ അക്ഷരത്തിൽ ഒരു വരി</p>
+ഒളിഞ്ഞിരിക്കുന്ന ഉത്തരം:  <details class="reveal"><summary>ജ്യോത്സ്യൻ എന്ത് പറഞ്ഞു?</summary><p>ഉത്തരം</p></details>
+YouTube വീഡിയോ:  <iframe class="media" loading="lazy" src="https://www.youtube.com/embed/VIDEO_ID" allowfullscreen></iframe>
+പട്ടിക (കഥാപാത്രങ്ങൾ):  <ul class="chars"><li>👸 <span class="n1">പേര്:</span> വിവരണം</li></ul>
+-->
+
