@@ -1310,8 +1310,8 @@ function setNotice(rows,hdr){
   const hn=(hdr||[]).map(h=>(h||"").toLowerCase().replace(/[\s_\-]/g,"")); let ni=hn.findIndex(h=>["notice","scroll","ticker","todayspecial","announcement"].includes(h)); if(ni<0) ni=14; const li=ni+1;
   let r=null; for(let i=rows.length-1;i>=0;i--){ if((rows[i][ni]||"").trim()){ r=rows[i]; break; } }
   if(location.hash==="#debug") alert("ഷീറ്റ് വരികൾ: "+rows.length+"\nതലക്കെട്ടുകൾ: "+(hdr||[]).join(", ")+"\nNotice കോളം: "+String.fromCharCode(65+ni)+"\nകണ്ടത്: "+(r?r[ni].slice(0,60):"ഒന്നുമില്ല"));
-  window.SHEETINFO="ഷീറ്റ്: "+rows.length+" വരികൾ • അറിയിപ്പ്: "+(r?(/^(off|ഓഫ്|ഇല്ല|none|no|0|-)$/i.test((r[ni]||"").trim())?"ഓഫ്":"ഉണ്ട്"):"ഇല്ല")+" • കോളം "+String.fromCharCode(65+ni)+(window.SHEETSRC||"");
-  if(!r||tkClosed||/^(off|ഓഫ്|ഇല്ല|none|no|0|-)$/i.test((r[ni]||"").trim())){ tk.style.display="none"; setFH(); return; }
+  window.SHEETINFO="ഷീറ്റ്: "+rows.length+" വരികൾ • അറിയിപ്പ്: "+(r?"ഉണ്ട്":"ഇല്ല")+" • കോളം "+String.fromCharCode(65+ni)+(window.SHEETSRC||"");
+  if(!r||tkClosed){ tk.style.display="none"; setFH(); return; }
   const tx=r[ni].trim().replace(/\s+/g," "), ln=(r[li]||"").trim(), inn=document.getElementById("tkIn");
   inn.textContent=tx+(ln?"   ➜   ":""); tk.dataset.link=ln;
   if(ln){ const a=document.createElement("a"); a.textContent="കൂടുതൽ അറിയാൻ ഇവിടെ ക്ലിക്ക് ചെയ്യുക"; inn.appendChild(a); }
